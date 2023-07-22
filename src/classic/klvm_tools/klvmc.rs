@@ -20,12 +20,12 @@ use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_sear
 
 use crate::classic::platform::distutils::dep_util::newer;
 
-use crate::compiler::klvm::convert_to_klvm_rs;
 use crate::compiler::compiler::compile_file;
 use crate::compiler::compiler::run_optimizer;
 use crate::compiler::compiler::DefaultCompilerOpts;
 use crate::compiler::comptypes::CompileErr;
 use crate::compiler::comptypes::CompilerOpts;
+use crate::compiler::klvm::convert_to_klvm_rs;
 use crate::compiler::runtypes::RunFailure;
 
 fn include_dialect(

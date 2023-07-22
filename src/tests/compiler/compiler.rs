@@ -4,9 +4,9 @@ use std::rc::Rc;
 use klvm_rs::allocator::Allocator;
 
 use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
-use crate::compiler::klvm::run;
 use crate::compiler::compiler::{compile_file, DefaultCompilerOpts};
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
+use crate::compiler::klvm::run;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;

@@ -5,9 +5,9 @@ use klvm_rs::allocator::Allocator;
 
 use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::klvm::run;
 use crate::compiler::codegen::get_callable;
 use crate::compiler::comptypes::{BodyForm, Callable, CompilerOpts, PrimaryCodegen};
+use crate::compiler::klvm::run;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
 use crate::util::u8_from_number;

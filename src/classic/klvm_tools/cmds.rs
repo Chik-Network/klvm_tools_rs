@@ -27,13 +27,13 @@ use crate::classic::klvm::keyword_from_atom;
 use crate::classic::klvm::serialize::{sexp_from_stream, sexp_to_stream, SimpleCreateKLVMObject};
 use crate::classic::klvm::sexp::{enlist, proper_list, sexp_as_bin};
 use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble, disassemble_with_kw};
-use crate::classic::klvm_tools::klvmc::{detect_modern, write_sym_output};
 use crate::classic::klvm_tools::debug::check_unused;
 use crate::classic::klvm_tools::debug::{
     program_hash_from_program_env_cons, start_log_after, trace_pre_eval, trace_to_table,
     trace_to_text,
 };
 use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::klvmc::{detect_modern, write_sym_output};
 use crate::classic::klvm_tools::sha256tree::sha256tree;
 use crate::classic::klvm_tools::stages;
 use crate::classic::klvm_tools::stages::stage_0::{
@@ -49,10 +49,10 @@ use crate::classic::platform::argparse::{
 
 use crate::compiler::cldb::{hex_to_modern_sexp, CldbNoOverride, CldbRun, CldbRunEnv};
 use crate::compiler::cldb_hierarchy::{HierarchiklRunner, HierarchiklStepResult, RunPurpose};
-use crate::compiler::klvm::start_step;
 use crate::compiler::compiler::{compile_file, run_optimizer, DefaultCompilerOpts};
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
 use crate::compiler::debug::build_symbol_table_mut;
+use crate::compiler::klvm::start_step;
 use crate::compiler::preprocessor::gather_dependencies;
 use crate::compiler::prims;
 use crate::compiler::runtypes::RunFailure;

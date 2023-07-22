@@ -9,13 +9,13 @@ use klvm_rs::allocator::Allocator;
 use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero};
 use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::klvm::run;
 use crate::compiler::codegen::codegen;
 use crate::compiler::compiler::is_at_capture;
 use crate::compiler::comptypes::{
     Binding, BodyForm, CompileErr, CompileForm, CompilerOpts, HelperForm, LetData, LetFormKind,
 };
 use crate::compiler::frontend::frontend;
+use crate::compiler::klvm::run;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;

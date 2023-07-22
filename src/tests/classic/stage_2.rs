@@ -6,9 +6,9 @@ use std::rc::Rc;
 use crate::classic::klvm::__type_compatibility__::Stream;
 use crate::classic::klvm::sexp::rest;
 use crate::classic::klvm_tools::binutils::{assemble, assemble_from_ir, disassemble};
-use crate::classic::klvm_tools::klvmc::compile_klvm_text;
 use crate::classic::klvm_tools::cmds::call_tool;
 use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::klvmc::compile_klvm_text;
 use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 use crate::classic::klvm_tools::stages::stage_2::compile::{
     do_com_prog, get_compile_filename, get_last_path_component, try_expand_macro_for_atom,

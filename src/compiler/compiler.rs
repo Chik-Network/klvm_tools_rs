@@ -11,13 +11,13 @@ use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero};
 use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 use crate::classic::klvm_tools::stages::stage_2::optimize::optimize_sexp;
 
-use crate::compiler::klvm::{convert_from_klvm_rs, convert_to_klvm_rs, sha256tree};
 use crate::compiler::codegen::{codegen, hoist_body_let_binding, process_helper_let_bindings};
 use crate::compiler::comptypes::{
     CompileErr, CompileForm, CompilerOpts, DefunData, HelperForm, PrimaryCodegen,
 };
 use crate::compiler::evaluate::{build_reflex_captures, Evaluator, EVAL_STACK_LIMIT};
 use crate::compiler::frontend::frontend;
+use crate::compiler::klvm::{convert_from_klvm_rs, convert_to_klvm_rs, sha256tree};
 use crate::compiler::prims;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{parse_sexp, SExp};
