@@ -4,12 +4,12 @@ use std::rc::Rc;
 
 use serde::Serialize;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::clvm::sha256tree;
+use crate::compiler::klvm::sha256tree;
 use crate::compiler::sexp::{decode_string, SExp};
 use crate::compiler::srcloc::Srcloc;
 
@@ -26,7 +26,7 @@ impl From<(Srcloc, String)> for CompileErr {
 }
 
 /// A structure carrying a compilation result to give it a distinct type from
-/// chialisp input.  It's used by codegen.
+/// chiklisp input.  It's used by codegen.
 #[derive(Clone, Debug)]
 pub struct CompiledCode(pub Srcloc, pub Rc<SExp>);
 
@@ -58,7 +58,7 @@ pub enum Callable {
     CallDefun(Srcloc, SExp),
     /// The expression expands and inline function.
     CallInline(Srcloc, InlineFunction),
-    /// The expression addresses a clvm primitive (such as a, c, f, =)
+    /// The expression addresses a klvm primitive (such as a, c, f, =)
     CallPrim(Srcloc, SExp),
     /// The expression is a (com ...) invokcation (normally used in macros).
     RunCompiler,
@@ -83,7 +83,7 @@ pub fn list_to_cons(l: Srcloc, list: &[Rc<SExp>]) -> SExp {
 
 /// A binding from a (let ...) form.  Specifies the name of the bound variable
 /// the location of the whole binding form, the location of the name atom (nl)
-/// and the body as a BodyForm (which are chialisp expressions).
+/// and the body as a BodyForm (which are chiklisp expressions).
 #[derive(Clone, Debug, Serialize)]
 pub struct Binding {
     /// Overall location of the form.
@@ -143,7 +143,7 @@ pub enum BodyForm {
     /// So tail improper calls aren't allowed.  In real lisp, (apply ...) can
     /// generate them if needed.
     Call(Srcloc, Vec<Rc<BodyForm>>),
-    /// (mod ...) can be used in chialisp as an expression, in which it returns
+    /// (mod ...) can be used in chiklisp as an expression, in which it returns
     /// the compiled code.  Here, it contains a CompileForm, which represents
     /// the full significant input of a program (yielded by frontend()).
     Mod(Srcloc, CompileForm),

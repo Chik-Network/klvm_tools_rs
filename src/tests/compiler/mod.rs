@@ -5,7 +5,7 @@ use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::{Srcloc, Until};
 
 mod cldb;
-mod clvm;
+mod klvm;
 mod compiler;
 mod evaluate;
 mod repl;

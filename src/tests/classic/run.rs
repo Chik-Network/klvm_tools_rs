@@ -15,14 +15,14 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use clvmr::allocator::Allocator;
+use klvmr::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero, Stream};
-use crate::classic::clvm_tools::binutils::disassemble;
-use crate::classic::clvm_tools::cmds::launch_tool;
-use crate::classic::clvm_tools::node_path::NodePath;
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero, Stream};
+use crate::classic::klvm_tools::binutils::disassemble;
+use crate::classic::klvm_tools::cmds::launch_tool;
+use crate::classic::klvm_tools::node_path::NodePath;
 
-use crate::compiler::clvm::convert_to_clvm_rs;
+use crate::compiler::klvm::convert_to_klvm_rs;
 use crate::compiler::sexp;
 use crate::compiler::sexp::decode_string;
 use crate::util::{number_from_u8, Number};
@@ -311,12 +311,12 @@ fn run_dependencies(filename: &str) -> HashSet<String> {
 
 #[test]
 fn test_get_dependencies_1() {
-    let dep_set = run_dependencies("resources/tests/singleton_top_layer.clvm");
+    let dep_set = run_dependencies("resources/tests/singleton_top_layer.klvm");
 
     eprintln!("dep_set {dep_set:?}");
 
     let mut expect_set = HashSet::new();
-    expect_set.insert("resources/tests/condition_codes.clvm".to_owned());
+    expect_set.insert("resources/tests/condition_codes.klvm".to_owned());
     expect_set.insert("resources/tests/curry-and-treehash.clinc".to_owned());
     expect_set.insert("resources/tests/singleton_truths.clib".to_owned());
 
@@ -554,7 +554,7 @@ fn test_divmod() {
 }
 
 #[cfg(test)]
-pub struct RandomClvmNumber {
+pub struct RandomKlvmNumber {
     pub intended_value: Number,
 }
 
@@ -574,7 +574,7 @@ fn test_classic_mod_form() {
 }
 
 #[cfg(test)]
-pub fn random_clvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomClvmNumber {
+pub fn random_klvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomKlvmNumber {
     // Make a number by creating some random atom bytes.
     // Set high bit randomly.
     let natoms = rng.gen_range(0..=NUM_GEN_ATOMS);
@@ -595,15 +595,15 @@ pub fn random_clvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomClvmNumber {
     }
     let num = number_from_u8(&result_bytes);
 
-    RandomClvmNumber {
+    RandomKlvmNumber {
         intended_value: num,
     }
 }
 
 #[cfg(test)]
-impl Distribution<RandomClvmNumber> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandomClvmNumber {
-        random_clvm_number(rng)
+impl Distribution<RandomKlvmNumber> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandomKlvmNumber {
+        random_klvm_number(rng)
     }
 }
 
@@ -612,7 +612,7 @@ impl Distribution<RandomClvmNumber> for Standard {
 fn test_encoding_properties() {
     let mut rng = ChaChaRng::from_entropy();
     for _ in 1..=200 {
-        let number_spec: RandomClvmNumber = rng.gen();
+        let number_spec: RandomKlvmNumber = rng.gen();
 
         // We'll have it compile a constant value.
         // The representation of the number will come out most likely
@@ -741,7 +741,7 @@ fn test_check_tricky_arg_path_random() {
         .trim()
         .to_string();
         let mut allocator = Allocator::new();
-        let converted = convert_to_clvm_rs(
+        let converted = convert_to_klvm_rs(
             &mut allocator,
             Rc::new(sexp::SExp::Atom(random_tree.loc(), k.clone())),
         )
@@ -805,14 +805,14 @@ fn test_classic_sets_source_file_in_symbols() {
         "--extra-syms".to_string(),
         "--symbol-output-file".to_string(),
         tname.clone(),
-        "resources/tests/assert.clvm".to_string(),
+        "resources/tests/assert.klvm".to_string(),
     ]);
     let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
     let decoded_symbol_file: HashMap<String, String> =
         serde_json::from_str(&read_in_file).expect("should decode");
     assert_eq!(
         decoded_symbol_file.get("source_file").cloned(),
-        Some("resources/tests/assert.clvm".to_string())
+        Some("resources/tests/assert.klvm".to_string())
     );
     fs::remove_file(tname).expect("should have dropped symbols");
 }
@@ -824,7 +824,7 @@ fn test_classic_sets_source_file_in_symbols_only_when_asked() {
         "run".to_string(),
         "--symbol-output-file".to_string(),
         tname.clone(),
-        "resources/tests/assert.clvm".to_string(),
+        "resources/tests/assert.klvm".to_string(),
     ]);
     let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
     fs::remove_file(&tname).expect("should have existed");

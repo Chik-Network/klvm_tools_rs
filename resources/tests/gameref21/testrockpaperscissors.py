@@ -1,15 +1,15 @@
 import hashlib
 
 from hsms.streamables.program import Program
-from hsms.puzzles.load_clvm import load_clvm
+from hsms.puzzles.load_klvm import load_klvm
 
-from clvm.EvalError import EvalError
+from klvm.EvalError import EvalError
 
 
-MOD_A = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsa.clvm.hex").read()))
-MOD_B = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsb.clvm.hex").read()))
-MOD_C = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsc.clvm.hex").read()))
-MOD_D = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsd.clvm.hex").read()))
+MOD_A = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsa.klvm.hex").read()))
+MOD_B = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsb.klvm.hex").read()))
+MOD_C = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsc.klvm.hex").read()))
+MOD_D = Program.from_bytes(bytes.fromhex(open("rockpaperscissorsd.klvm.hex").read()))
 
 
 def drun(prog: Program, *args: Program):

@@ -5,12 +5,12 @@ use std::rc::Rc;
 
 use num_bigint::ToBigInt;
 
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
-use clvm_rs::allocator::Allocator;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::bi_one;
+use crate::classic::klvm::__type_compatibility__::bi_one;
 
-use crate::compiler::clvm::run;
+use crate::compiler::klvm::run;
 use crate::compiler::compiler::{is_at_capture, run_optimizer};
 use crate::compiler::comptypes::{
     fold_m, join_vecs_to_string, list_to_cons, Binding, BodyForm, Callable, CompileErr,
@@ -1257,7 +1257,7 @@ pub fn codegen(
             )),
             Some(code) => {
                 // Capture symbols now that we have the final form of the produced code.
-                symbol_table.insert("__chia__main_arguments".to_string(), cmod.args.to_string());
+                symbol_table.insert("__chik__main_arguments".to_string(), cmod.args.to_string());
 
                 if opts.in_defun() {
                     let final_code = primapply(

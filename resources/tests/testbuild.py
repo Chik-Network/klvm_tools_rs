@@ -2,22 +2,22 @@ import os
 from pathlib import Path
 import binascii
 import json
-from clvm_tools.binutils import assemble, disassemble
-from clvm_tools_rs import start_clvm_program, compose_run_function, compile_clvm
-from chia_rs import run_chia_program, tree_hash
+from klvm_tools.binutils import assemble, disassemble
+from klvm_tools_rs import start_klvm_program, compose_run_function, compile_klvm
+from chik_rs import run_chik_program, tree_hash
 
 def compute_output_file_names(source):
     path_obj = Path(source)
     file_path = path_obj.parent
     file_stem = path_obj.stem
-    return (file_path / (file_stem + ".clvm.hex"), file_path / (file_stem + ".sym"))
+    return (file_path / (file_stem + ".klvm.hex"), file_path / (file_stem + ".sym"))
 
 def get_program_hash(hexfile):
     return tree_hash(binascii.unhexlify(open(hexfile).read().strip()))
 
 def compile_module_with_symbols(include_paths,source):
     (hex_file, sym_file) = compute_output_file_names(source)
-    compile_result = compile_clvm(source, str(hex_file.absolute()), include_paths, True)
+    compile_result = compile_klvm(source, str(hex_file.absolute()), include_paths, True)
     symbols = compile_result['symbols']
     if len(symbols) != 0:
         with open(str(sym_file.absolute()),'w') as symfile:

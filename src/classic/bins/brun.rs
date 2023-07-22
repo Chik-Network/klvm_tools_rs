@@ -1,4 +1,4 @@
-use clvm_tools_rs::classic::clvm_tools::cmds::brun;
+use klvm_tools_rs::classic::klvm_tools::cmds::brun;
 use std::env;
 
 fn main() {

@@ -3,7 +3,7 @@ name: npm publish
 on:
   push:
     branches:
-      - main
+      #- main
       - dev
     tags:
         - '**'
@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: npm-pkg
-          path: ./wasm/pkg/clvm_tools_wasm-*.tgz
+          path: ./wasm/pkg/klvm_tools_wasm-*.tgz
 
       - name: Test for secrets access
         id: check_secrets
@@ -57,12 +57,12 @@ jobs:
           if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
           echo "HAS_SECRET=${HAS_SECRET}" >>$GITHUB_OUTPUT
         env:
-          SECRET: "${{ secrets.test_pypi_password }}"
+          SECRET: "${{ secrets.pypi_password }}"
 
       - name: Publish wasm
         if: steps.check_secrets.HAS_SECRET
         shell: bash
         run: |
           cd wasm/pkg
-          rm -f clvm_tools_wasm-*.tgz
+          rm -f klvm_tools_wasm-*.tgz
           npm publish --access public

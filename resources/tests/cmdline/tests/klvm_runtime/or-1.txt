@@ -1,0 +1,2 @@
+run -i klvm_runtime '(mod (A B) (include "macros.klvm") (or (= 1 0) (= 2 0) (= 3 3)))'
+(q . 1)

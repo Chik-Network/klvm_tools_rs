@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 use crate::compiler::compiler::DefaultCompilerOpts;
 use crate::compiler::comptypes::CompileErr;
 use crate::compiler::repl::Repl;

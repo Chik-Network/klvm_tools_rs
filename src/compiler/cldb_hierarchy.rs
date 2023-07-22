@@ -2,15 +2,15 @@ use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 use num_bigint::ToBigInt;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::cldb::{CldbNoOverride, CldbRun, CldbRunEnv};
-use crate::compiler::clvm;
-use crate::compiler::clvm::{sha256tree, truthy, RunStep};
+use crate::compiler::klvm;
+use crate::compiler::klvm::{sha256tree, truthy, RunStep};
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{decode_string, parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;
@@ -48,7 +48,7 @@ pub struct HierarchyFrame {
     pub run: CldbRun,
 }
 
-pub struct HierarchialRunner {
+pub struct HierarchiklRunner {
     allocator: Allocator,
     runner: Rc<dyn TRunProgram>,
     prim_map: Rc<HashMap<Vec<u8>, Rc<SExp>>>,
@@ -62,7 +62,7 @@ pub struct HierarchialRunner {
 }
 
 #[derive(Clone, Debug)]
-pub enum HierarchialStepResult {
+pub enum HierarchiklStepResult {
     ShapeChange,
     Info(Option<BTreeMap<String, String>>),
     Done(Option<BTreeMap<String, String>>),
@@ -94,7 +94,7 @@ pub fn get_fun_hash(op: Rc<SExp>, sexp: Rc<SExp>) -> Option<(Vec<u8>, Rc<SExp>, 
     if let SExp::Cons(_, prog, args) = sexp.borrow() {
         if is_apply_op(op) {
             if let SExp::Cons(_, env, _) = args.borrow() {
-                return Some((clvm::sha256tree(prog.clone()), prog.clone(), env.clone()));
+                return Some((klvm::sha256tree(prog.clone()), prog.clone(), env.clone()));
             }
         }
     }
@@ -190,7 +190,7 @@ fn get_args_from_env(
     }
 }
 
-impl HierarchialRunner {
+impl HierarchiklRunner {
     pub fn new(
         runner: Rc<dyn TRunProgram>,
         prim_map: Rc<HashMap<Vec<u8>, Rc<SExp>>>,
@@ -200,7 +200,7 @@ impl HierarchialRunner {
         prog: Rc<SExp>,
         env: Rc<SExp>,
     ) -> Self {
-        let step = clvm::start_step(prog.clone(), env.clone());
+        let step = klvm::start_step(prog.clone(), env.clone());
         let run = CldbRun::new(
             runner.clone(),
             prim_map.clone(),
@@ -212,7 +212,7 @@ impl HierarchialRunner {
             step,
         );
 
-        let fun_args = sexp_from_symbol_table(symbol_table.borrow(), "__chia__main_arguments")
+        let fun_args = sexp_from_symbol_table(symbol_table.borrow(), "__chik__main_arguments")
             .unwrap_or_else(|| Rc::new(SExp::Nil(prog.loc())));
 
         let mut program_args = HashMap::new();
@@ -224,7 +224,7 @@ impl HierarchialRunner {
             false,
         );
 
-        HierarchialRunner {
+        HierarchiklRunner {
             allocator: Allocator::new(),
             runner,
             prim_map,
@@ -243,8 +243,8 @@ impl HierarchialRunner {
                 function_hash: sha256tree(prog.clone()),
                 function_name: input_file.unwrap_or_else(|| {
                     format!(
-                        "clvm_program_{}",
-                        hex_of_hash(&clvm::sha256tree(prog.clone()))
+                        "klvm_program_{}",
+                        hex_of_hash(&klvm::sha256tree(prog.clone()))
                     )
                 }),
                 function_arguments: fun_args,
@@ -265,7 +265,7 @@ impl HierarchialRunner {
     }
 
     fn push_synthetic_stack_frame(&mut self, current_env: Rc<SExp>, info: &RunStepRelevantInfo) {
-        let arg_step = clvm::start_step(info.prog.clone(), info.runtime_argument_values.clone());
+        let arg_step = klvm::start_step(info.prog.clone(), info.runtime_argument_values.clone());
 
         let arg_run = CldbRun::new(
             self.runner.clone(),
@@ -305,7 +305,7 @@ impl HierarchialRunner {
         };
 
         // Make an empty frame to repopulate (maybe option here?).
-        let step = clvm::start_step(info.prog.clone(), current_env.clone());
+        let step = klvm::start_step(info.prog.clone(), current_env.clone());
         let run = CldbRun::new(
             self.runner.clone(),
             self.prim_map.clone(),
@@ -337,7 +337,7 @@ impl HierarchialRunner {
         self.running.push(arg_frame);
     }
 
-    pub fn step(&mut self) -> Result<HierarchialStepResult, RunFailure> {
+    pub fn step(&mut self) -> Result<HierarchiklStepResult, RunFailure> {
         if self.running.is_empty() {
             return Err(RunFailure::RunErr(
                 self.prog.loc(),
@@ -357,14 +357,14 @@ impl HierarchialRunner {
             }
 
             if self.running.is_empty() {
-                return Ok(HierarchialStepResult::Done(None));
+                return Ok(HierarchiklStepResult::Done(None));
             }
 
             idx -= 1;
 
             self.running[idx].env = outcome;
 
-            let step = clvm::step_return_value(
+            let step = klvm::step_return_value(
                 &self.running[idx].run.current_step(),
                 self.running[idx].env.clone(),
             );
@@ -380,19 +380,19 @@ impl HierarchialRunner {
                 step,
             );
 
-            Ok(HierarchialStepResult::ShapeChange)
+            Ok(HierarchiklStepResult::ShapeChange)
         } else if let Some(info) = relevant_run_step_info(&self.symbol_table, &current_step) {
             // Create a frame based on the last argument.
             self.push_synthetic_stack_frame(current_env, &info);
 
-            Ok(HierarchialStepResult::ShapeChange)
+            Ok(HierarchiklStepResult::ShapeChange)
         } else {
             // Not final result, we'll step the top of the stack.
             let info = self.running[idx].run.step(&mut self.allocator);
             if let Some(i) = &info {
                 self.error |= i.get("Failure").is_some();
             }
-            Ok(HierarchialStepResult::Info(info))
+            Ok(HierarchiklStepResult::Info(info))
         }
     }
 }

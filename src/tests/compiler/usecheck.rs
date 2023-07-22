@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::clvm_tools::cmds::launch_tool;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm_tools::cmds::launch_tool;
 
 use crate::compiler::compiler::DefaultCompilerOpts;
 use crate::compiler::comptypes::CompilerOpts;
@@ -155,7 +155,7 @@ fn verify_use_check_with_singleton_top_layer_fails_when_we_comment_out_all_uses_
         "-i".to_string(),
         "resources/tests".to_string(),
         "--check-unused-args".to_string(),
-        "resources/tests/singleton_top_layer.clvm".to_string(),
+        "resources/tests/singleton_top_layer.klvm".to_string(),
     ]);
     assert_eq!(res, "unused arguments detected at the mod level (lower case arguments are considered uncurried by convention)\n - lineage_proof\n");
 }
@@ -167,7 +167,7 @@ fn verify_use_check_with_singleton_top_layer_works() {
         "-i".to_string(),
         "resources/tests".to_string(),
         "--check-unused-args".to_string(),
-        "resources/tests/singleton_top_layer.clvm".to_string(),
+        "resources/tests/singleton_top_layer.klvm".to_string(),
     ]);
     assert!(res.len() > 0 && res.as_bytes()[0] == b'(');
 }

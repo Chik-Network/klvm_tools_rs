@@ -4,12 +4,12 @@ use std::rc::Rc;
 
 use num_bigint::ToBigInt;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero};
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero};
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::clvm::run;
+use crate::compiler::klvm::run;
 use crate::compiler::codegen::codegen;
 use crate::compiler::compiler::is_at_capture;
 use crate::compiler::comptypes::{
@@ -73,11 +73,11 @@ pub enum ArgInputs {
 /// Evaluator is an object that simplifies expressions, given the helpers
 /// (helpers are forms that are reusable parts of programs, such as defconst,
 /// defun or defmacro) from a program.  In the simplest form, it can be used to
-/// power a chialisp repl, but also to simplify expressions to their components.
+/// power a chiklisp repl, but also to simplify expressions to their components.
 ///
 /// The emitted expressions are simpler and sometimes smaller, depending on what the
 /// evaulator was able to do.  It performs all obvious substitutions and some
-/// obvious simplifications based on CLVM operations (such as combining
+/// obvious simplifications based on KLVM operations (such as combining
 /// picking operations with conses in some cases).  If the expression can't
 /// be simplified to a constant, any remaining variable references and the
 /// operations on them are left.
@@ -961,7 +961,7 @@ impl<'info> Evaluator {
     // A frontend language evaluator and minifier
     fn shrink_bodyform_visited(
         &self,
-        allocator: &mut Allocator, // Support random prims via clvm_rs
+        allocator: &mut Allocator, // Support random prims via klvm_rs
         visited_: &'info mut VisitedMarker<'_, VisitedInfo>,
         prog_args: Rc<SExp>,
         env: &HashMap<Vec<u8>, Rc<BodyForm>>,
@@ -1144,7 +1144,7 @@ impl<'info> Evaluator {
     /// as full a result as possible.
     pub fn shrink_bodyform(
         &self,
-        allocator: &mut Allocator, // Support random prims via clvm_rs
+        allocator: &mut Allocator, // Support random prims via klvm_rs
         prog_args: Rc<SExp>,
         env: &HashMap<Vec<u8>, Rc<BodyForm>>,
         body: Rc<BodyForm>,
@@ -1157,7 +1157,7 @@ impl<'info> Evaluator {
         };
         let mut visited_marker = VisitedMarker::new(visited_info);
         self.shrink_bodyform_visited(
-            allocator, // Support random prims via clvm_rs
+            allocator, // Support random prims via klvm_rs
             &mut visited_marker,
             prog_args,
             env,
@@ -1168,7 +1168,7 @@ impl<'info> Evaluator {
 
     fn expand_macro(
         &self,
-        allocator: &mut Allocator, // Support random prims via clvm_rs
+        allocator: &mut Allocator, // Support random prims via klvm_rs
         call_loc: Srcloc,
         program: Rc<CompileForm>,
         args: Rc<SExp>,

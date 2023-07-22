@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const wasm = require("../pkg/clvm_tools_wasm");
+const wasm = require("../pkg/klvm_tools_wasm");
 
 function unHexlify(str){
   let result = "";
@@ -10,12 +10,12 @@ function unHexlify(str){
   return result;
 }
 
-const fact_hex = fs.readFileSync(path.resolve(__dirname, "./test-data/fact.clvm.hex")).toString("utf8");
+const fact_hex = fs.readFileSync(path.resolve(__dirname, "./test-data/fact.klvm.hex")).toString("utf8");
 const fact_sym_txt = fs.readFileSync(path.resolve(__dirname, "./test-data/fact.sym")).toString("utf8");
 const fact_sym = JSON.parse(fact_sym_txt);
 
 function run_program(program, args, symbols, overrides) {
-  let runner = wasm.create_clvm_runner(program, args, symbols, overrides);
+  let runner = wasm.create_klvm_runner(program, args, symbols, overrides);
   let ended = null;
   
   do {
@@ -33,7 +33,7 @@ function run_program(program, args, symbols, overrides) {
   } while (true);
   
   let finished = wasm.final_value(runner);
-  wasm.remove_clvm_runner(runner);
+  wasm.remove_klvm_runner(runner);
   return finished;
 }
 

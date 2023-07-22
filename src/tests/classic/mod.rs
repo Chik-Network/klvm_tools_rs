@@ -1,4 +1,4 @@
-mod clvmc;
+mod klvmc;
 mod optimize;
 pub mod run;
 mod smoke;

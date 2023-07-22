@@ -6,12 +6,12 @@ build-backend = "maturin"
 bindings = "pyo3"
 
 [project]
-name = "clvm_tools_rs"
+name = "klvm_tools_rs"
 
-# - Reenable these when we switch over from clvm_tools.
+# - Reenable these when we switch over from klvm_tools.
 # [project.scripts]
-# brun = "clvm_tools_rs.cmds:brun"
-# run = "clvm_tools_rs.cmds:run"
-# opc = "clvm_tools_rs.cmds:opc"
-# opd = "clvm_tools_rs.cmds:opd"
-# cldb = "clvm_tools_rs.cmds:cldb"
+# brun = "klvm_tools_rs.cmds:brun"
+# run = "klvm_tools_rs.cmds:run"
+# opc = "klvm_tools_rs.cmds:opc"
+# opd = "klvm_tools_rs.cmds:opd"
+# cldb = "klvm_tools_rs.cmds:cldb"

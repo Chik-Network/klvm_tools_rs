@@ -1,15 +1,15 @@
-extern crate clvmr as clvm_rs;
+extern crate klvmr as klvm_rs;
 
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 
-use crate::compiler::clvm::sha256tree;
+use crate::compiler::klvm::sha256tree;
 use crate::compiler::comptypes::{BodyForm, CompileErr, CompileForm, CompilerOpts};
 use crate::compiler::evaluate::{Evaluator, EVAL_STACK_LIMIT};
 use crate::compiler::sexp::SExp;

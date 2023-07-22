@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::classic::clvm_tools::cmds;
+use crate::classic::klvm_tools::cmds;
 
 #[pyfunction]
 pub fn brun_main(args: Vec<String>) {

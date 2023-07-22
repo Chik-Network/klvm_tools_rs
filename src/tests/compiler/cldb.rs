@@ -2,12 +2,12 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::rc::Rc;
 
-use clvmr::allocator::Allocator;
+use klvmr::allocator::Allocator;
 
-use crate::classic::clvm_tools::cmds::{cldb_hierarchy, YamlElement};
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::klvm_tools::cmds::{cldb_hierarchy, YamlElement};
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 use crate::compiler::cldb::{hex_to_modern_sexp, CldbNoOverride, CldbRun, CldbRunEnv};
-use crate::compiler::clvm::{start_step, RunStep};
+use crate::compiler::klvm::{start_step, RunStep};
 use crate::compiler::compiler::{compile_file, DefaultCompilerOpts};
 use crate::compiler::comptypes::CompilerOpts;
 use crate::compiler::prims;
@@ -42,7 +42,7 @@ trait StepOfCldbViewer {
     }
 }
 
-fn run_clvm_in_cldb<V>(
+fn run_klvm_in_cldb<V>(
     program_name: &str,
     program_lines: Rc<Vec<String>>,
     program: Rc<SExp>,
@@ -88,7 +88,7 @@ struct DoesntWatchCldb {}
 impl StepOfCldbViewer for DoesntWatchCldb {}
 
 #[test]
-fn test_run_clvm_in_cldb() {
+fn test_run_klvm_in_cldb() {
     let program_name = "fact.clsp";
     let program_code = "(mod (X) (include *standard-cl-21*) (defun fact (X) (if (> X 1) (* X (fact (- X 1))) 1)) (fact X))";
     let mut allocator = Allocator::new();
@@ -109,7 +109,7 @@ fn test_run_clvm_in_cldb() {
     let program_lines: Vec<String> = program_code.lines().map(|x| x.to_string()).collect();
 
     assert_eq!(
-        run_clvm_in_cldb(
+        run_klvm_in_cldb(
             program_name,
             Rc::new(program_lines),
             Rc::new(program),
@@ -356,7 +356,7 @@ fn test_cldb_explicit_throw() {
     let mut watcher = ExpectFailure::new(true, Some("(2)".to_string()));
 
     assert_eq!(
-        run_clvm_in_cldb(
+        run_klvm_in_cldb(
             program_name,
             program_lines,
             program,

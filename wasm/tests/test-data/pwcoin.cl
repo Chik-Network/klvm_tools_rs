@@ -1,5 +1,5 @@
 (mod (password new_puzhash amount)
-     (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
+     (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
 
      (defconstant CREATE_COIN 51)
 

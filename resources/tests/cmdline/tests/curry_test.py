@@ -1,7 +1,7 @@
-from clvm.operators import KEYWORD_TO_ATOM
+from klvm.operators import KEYWORD_TO_ATOM
 
-from clvm_tools.binutils import assemble, disassemble
-from clvm_tools.curry import curry, uncurry
+from klvm_tools.binutils import assemble, disassemble
+from klvm_tools.curry import curry, uncurry
 
 
 def check_idempotency(f, args):

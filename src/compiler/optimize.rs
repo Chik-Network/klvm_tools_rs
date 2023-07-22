@@ -1,11 +1,11 @@
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::clvm::run;
+use crate::compiler::klvm::run;
 use crate::compiler::codegen::get_callable;
 use crate::compiler::comptypes::{BodyForm, Callable, CompilerOpts, PrimaryCodegen};
 use crate::compiler::sexp::SExp;

@@ -1,8 +1,8 @@
-# clvm_tools_rs Changelog
+# klvm_tools_rs Changelog
 
 ## 0.1.34
 ### Fixed
-- Fixed chialisp compilation issues
+- Fixed chiklisp compilation issues
 
 
 ## 0.1.33
@@ -16,11 +16,11 @@
 ## 0.1.32
 Skipped
 
-## 0.1.31 Chia CLVM Tools Rust 2023-04-17
+## 0.1.31 Chik KLVM Tools Rust 2023-04-17
 
 ### Added
 
 - defconst was added.
-- hierarchial debug was added.
-- clvm command linetools: supported more command line features in both compiler front-ends.
+- hierarchikl debug was added.
+- klvm command linetools: supported more command line features in both compiler front-ends.
 

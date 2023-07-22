@@ -9,7 +9,7 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::classic::clvm::__type_compatibility__::Record;
+use crate::classic::klvm::__type_compatibility__::Record;
 use crate::util::{index_of_match, skip_leading};
 
 #[derive(PartialEq, Debug, Clone, Eq)]

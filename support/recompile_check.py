@@ -5,7 +5,7 @@ import traceback
 recompile_list = [
     'block_program_zero.clsp',
     'calculate_synthetic_public_key.clsp',
-    'chialisp_deserialisation.clsp',
+    'chiklisp_deserialisation.clsp',
     'decompress_coin_spend_entry.clsp',
     'decompress_coin_spend_entry_with_prefix.clsp',
     'decompress_puzzle.clsp',
@@ -40,11 +40,11 @@ recompile_list = [
 ]
 
 for fname in recompile_list:
-    hexfile = f'./chia/wallet/puzzles/{fname}.hex'
+    hexfile = f'./chik/wallet/puzzles/{fname}.hex'
     hexdata = open(hexfile).read().strip()
     os.unlink(hexfile)
     try:
-        compiled = subprocess.check_output(['../target/release/run', '-i', 'chia/wallet/puzzles/', f'chia/wallet/puzzles/{fname}']).strip()
+        compiled = subprocess.check_output(['../target/release/run', '-i', 'chik/wallet/puzzles/', f'chik/wallet/puzzles/{fname}']).strip()
         recompile = subprocess.check_output(['../target/release/opc', compiled]).decode('utf8').strip()
     except:
         print(f'compiling {fname}')

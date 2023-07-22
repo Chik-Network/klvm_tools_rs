@@ -4,7 +4,7 @@ import pkg_resources
 import shlex
 import sys
 import unittest
-from clvm_tools_rs import call_tool, launch_tool
+from klvm_tools_rs import call_tool, launch_tool
 
 
 # If the REPAIR environment variable is set, any tests failing due to
@@ -112,7 +112,7 @@ inject("stage_1")
 
 inject("stage_2")
 
-inject("clvm_runtime")
+inject("klvm_runtime")
 
 inject("cmd")
 
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
 
 """
-Copyright 2018 Chia Network Inc
+Copyright 2018 Chik Network Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -5,24 +5,24 @@ use std::io;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::reduction::EvalErr;
 
-use crate::classic::clvm::__type_compatibility__::{
+use crate::classic::klvm::__type_compatibility__::{
     pybytes_repr, t, Bytes, Stream, UnvalidatedBytesFromType,
 };
-use crate::classic::clvm::serialize::{sexp_from_stream, SimpleCreateCLVMObject};
-use crate::classic::clvm::sexp::{First, NodeSel, Rest, SelectNode, ThisNode};
-use crate::classic::clvm::syntax_error::SyntaxErr;
-use crate::classic::clvm_tools::cmds::{launch_tool, OpcConversion, OpdConversion, TConversion};
+use crate::classic::klvm::serialize::{sexp_from_stream, SimpleCreateKLVMObject};
+use crate::classic::klvm::sexp::{First, NodeSel, Rest, SelectNode, ThisNode};
+use crate::classic::klvm::syntax_error::SyntaxErr;
+use crate::classic::klvm_tools::cmds::{launch_tool, OpcConversion, OpdConversion, TConversion};
 
-use crate::classic::clvm_tools::binutils::{assemble, assemble_from_ir, disassemble};
-use crate::classic::clvm_tools::ir::r#type::IRRepr;
-use crate::classic::clvm_tools::ir::reader::read_ir;
-use crate::classic::clvm_tools::node_path::NodePath;
-use crate::classic::clvm_tools::stages;
-use crate::classic::clvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
-use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::klvm_tools::binutils::{assemble, assemble_from_ir, disassemble};
+use crate::classic::klvm_tools::ir::r#type::IRRepr;
+use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::node_path::NodePath;
+use crate::classic::klvm_tools::stages;
+use crate::classic::klvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
+use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
 use crate::classic::platform::argparse::{
     Argument, ArgumentParser, NArgsSpec, TArgumentParserProps,
 };
@@ -136,7 +136,7 @@ fn mid_negative_value_bin() {
     let atom = sexp_from_stream(
         &mut allocator,
         &mut stream,
-        Box::new(SimpleCreateCLVMObject {}),
+        Box::new(SimpleCreateKLVMObject {}),
     )
     .expect("should be able to make nodeptr");
     if let SExp::Atom(abuf) = allocator.sexp(atom.1) {
@@ -575,7 +575,7 @@ fn pool_member_innerpuz() {
           ; pool_reward_height is the block height that the reward was generated at. This is used to calculate the coin ID.
           ; key_value_list is signed extra data that the wallet may want to publicly announce for syncing purposes
         
-          (include condition_codes.clvm)
+          (include condition_codes.klvm)
           (include singleton_truths.clib)
         
           ; takes a lisp tree and returns the hash of it

@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::classic::clvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
+use crate::classic::klvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
 
 use crate::compiler::sexp::SExp;
 use crate::util::u8_from_number;
@@ -16,10 +16,10 @@ use crate::util::u8_from_number;
 /// A fuller explanation:e
 ///
 /// This is purely syntactic so there's no environment in play here, basically
-/// just about the CLVM value space and how program source code is represented in
-/// CLVM values.
+/// just about the KLVM value space and how program source code is represented in
+/// KLVM values.
 ///
-/// These are all equivalent in CLVM:
+/// These are all equivalent in KLVM:
 ///
 /// ##    "Y" Y 89 0x59
 ///
@@ -27,7 +27,7 @@ use crate::util::u8_from_number;
 ///
 /// ##    (list Y "Y" 89 0x59) ;; 1
 ///
-/// Gives the compiler back a CLVM expression that could mean any of these
+/// Gives the compiler back a KLVM expression that could mean any of these
 /// things:
 ///
 /// ##    (c Y (c Y (c Y (c Y ()))))
@@ -124,24 +124,24 @@ fn relabel_inner_(
 ///
 /// (defmacro M (VAR) (q . 87))
 ///
-/// As originally envisioned, chialisp macros compile to CLVM programs and consume
-/// the program as CLVM code.  When the language is maximally permissive this isn't
+/// As originally envisioned, chiklisp macros compile to KLVM programs and consume
+/// the program as KLVM code.  When the language is maximally permissive this isn't
 /// inconsistent; a "W" string is the same representation as a W atom (an
 /// identifier) and the number 87.  The problem is when users want the language to
 /// distinguish between legal and illegal uses of identifiers, this poses a
 /// problem.
 ///
-/// In the above code, the macro produces a CLVM value.  That value has a valid
+/// In the above code, the macro produces a KLVM value.  That value has a valid
 /// interpretation as the number 87, the string constant "W" or the identifier W.
 /// If I make the rule that 'identifiers must be bound' under these conditions
 /// then I've also made the rule that "one cannot return a number from a macro that
 /// doesn't correspond coincidentally to the name of a bound variable, which
-/// likely isn't expected given that the chialisp language gives the user the
+/// likely isn't expected given that the chiklisp language gives the user the
 /// ability to input this value in the distinct forms of integer, identifier,
 /// string and such.  Therefore, the 87 here and the W in the next paragraph refer
-/// to the same ambigious value in the CLVM value space.  A fix for this has been
+/// to the same ambigious value in the KLVM value space.  A fix for this has been
 /// held off for a while while a good long term solution was thought through, which
-/// will appear in the form of macros that execute in the value space of chialisp
+/// will appear in the form of macros that execute in the value space of chiklisp
 /// SExp (with distinctions between string, integer, identifier etc) and that
 /// improvement is in process.
 ///
@@ -150,7 +150,7 @@ fn relabel_inner_(
 /// and the user intends the compiler to check whether downstream uses of W are
 /// bound, in the second case, it's clear that won't be intended.
 ///
-/// In classic chialisp, unclaimed identifiers are always treated as constant
+/// In classic chiklisp, unclaimed identifiers are always treated as constant
 /// numbers, but when we're being asked to make things strict, deciding which
 /// to do makes things difficult.  Existing macro code assumes it can use unbound
 /// words to name functions in the parent frame, among other things and they'll

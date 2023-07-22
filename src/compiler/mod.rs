@@ -1,8 +1,8 @@
-/// Chialisp debugging.
+/// Chiklisp debugging.
 pub mod cldb;
 pub mod cldb_hierarchy;
-/// CLVM running.
-pub mod clvm;
+/// KLVM running.
+pub mod klvm;
 mod codegen;
 /// CompilerOpts which is the main holder of toplevel compiler state.
 #[allow(clippy::module_inception)]

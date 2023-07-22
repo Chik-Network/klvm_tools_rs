@@ -5,9 +5,9 @@ use std::env;
 use std::mem::swap;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 use crate::compiler::comptypes::{BodyForm, CompileErr, CompilerOpts};
 use crate::compiler::evaluate::{first_of_alist, second_of_alist, Evaluator, EVAL_STACK_LIMIT};
 use crate::compiler::frontend::frontend;
@@ -15,7 +15,7 @@ use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;
 use crate::util::ErrInto;
 
-/// An object implementing a full repl for the language of chialisp toplevel forms
+/// An object implementing a full repl for the language of chiklisp toplevel forms
 /// and expressions.
 ///
 /// Internally, it determines whether the next form it's been asked to act upon
@@ -84,10 +84,10 @@ fn count_depth(s: &str) -> i32 {
 }
 
 impl Repl {
-    /// Create a new Repl given a set of CompilerOpts and a chialisp program
-    /// runner, TRunProgram.  The runner is used to evaluate arbitrary CLVM
+    /// Create a new Repl given a set of CompilerOpts and a chiklisp program
+    /// runner, TRunProgram.  The runner is used to evaluate arbitrary KLVM
     /// code when required.  Evaluator implements some primitives itself, but
-    /// many are taken from clvmr.
+    /// many are taken from klvmr.
     pub fn new(opts: Rc<dyn CompilerOpts>, runner: Rc<dyn TRunProgram>) -> Repl {
         let loc = Srcloc::start(&opts.filename());
         let mut toplevel_forms = HashSet::new();

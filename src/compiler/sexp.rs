@@ -16,8 +16,8 @@ use num_traits::{zero, Num};
 
 use serde::Serialize;
 
-use crate::classic::clvm::__type_compatibility__::{bi_zero, Bytes, BytesFromType};
-use crate::classic::clvm::casts::{bigint_from_bytes, bigint_to_bytes_clvm, TConvertOption};
+use crate::classic::klvm::__type_compatibility__::{bi_zero, Bytes, BytesFromType};
+use crate::classic::klvm::casts::{bigint_from_bytes, bigint_to_bytes_klvm, TConvertOption};
 use crate::compiler::prims::prims;
 use crate::compiler::srcloc::Srcloc;
 use crate::util::{number_from_u8, u8_from_number, Number};
@@ -28,7 +28,7 @@ pub const MAX_SEXP_COST: usize = 15;
 /// The compiler's view of SExp.
 ///
 /// These preserve some characteristics of the source text that aren't strictly
-/// required for chialisp but are useful for ergonomics and compilation.  The
+/// required for chiklisp but are useful for ergonomics and compilation.  The
 /// Srcloc especially is relied on by the vscode plugin, which uses the frontend
 /// entrypoints here for parsing and to surface some kinds of errors.
 #[derive(Clone, Debug, Serialize)]
@@ -440,7 +440,7 @@ impl SExp {
                 b.encode_mut(v);
             }
             SExp::Integer(_, i) => {
-                let mut bi_bytes = bigint_to_bytes_clvm(i).data().to_vec();
+                let mut bi_bytes = bigint_to_bytes_klvm(i).data().to_vec();
 
                 v.append(&mut bi_bytes);
             }
@@ -812,7 +812,7 @@ where
 }
 
 ///
-/// Entrypoint for parsing chialisp input.
+/// Entrypoint for parsing chiklisp input.
 ///
 /// This produces Rc<SExp>, where SExp is described above.
 ///

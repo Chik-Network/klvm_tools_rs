@@ -15,5 +15,5 @@ RUN curl https://files.pythonhosted.org/packages/99/bb/696e256f4f445809f25efd4e4
 RUN sh -c "cd pip-22.1 && python3 setup.py install"
 RUN pip install maturin[patchelf]
 RUN pip install maturin
-WORKDIR /root/clvm_tools_rs
+WORKDIR /root/klvm_tools_rs
 COPY ./build-alpine.sh /root
