@@ -25,7 +25,7 @@ jobs:
       with:
         access_token: ${{ github.token }}
 
-    - uses: Chia-Network/actions/clean-workspace@main
+    - uses: Chik-Network/actions/clean-workspace@main
 
     - name: Checkout code
       uses: actions/checkout@v2
@@ -46,11 +46,11 @@ jobs:
         arch -arm64 maturin build --no-sdist -i python --release --strip --cargo-extra-args="--all-features"
         arch -arm64 cargo test --no-default-features
 
-    - name: Install clvm_tools_rs wheel
+    - name: Install klvm_tools_rs wheel
       run: |
         . ./venv/bin/activate
         ls target/wheels/
-        arch -arm64 pip install ./target/wheels/clvm_tools_rs*.whl
+        arch -arm64 pip install ./target/wheels/klvm_tools_rs*.whl
 
     - name: Install other wheels
       run: |
@@ -58,37 +58,37 @@ jobs:
         arch -arm64 python -m pip install pytest
         arch -arm64 python -m pip install blspy
 
-    - name: install clvm & clvm_tools
+    - name: install klvm & klvm_tools
       run: |
         . ./venv/bin/activate
-        arch -arm64 git clone https://github.com/Chia-Network/clvm.git --branch=main --single-branch
-        arch -arm64 python -m pip install ./clvm
-        arch -arm64 python -m pip install clvm_rs
+        arch -arm64 git clone https://github.com/Chik-Network/klvm.git --branch=main --single-branch
+        arch -arm64 python -m pip install ./klvm
+        arch -arm64 python -m pip install klvm_rs
 
-        arch -arm64 git clone https://github.com/Chia-Network/clvm_tools.git --branch=main --single-branch
-        arch -arm64 python -m pip install ./clvm_tools
+        arch -arm64 git clone https://github.com/Chik-Network/klvm_tools.git --branch=main --single-branch
+        arch -arm64 python -m pip install ./klvm_tools
 
-    - name: Ensure clvm, clvm_rs, clvm_tools are installed
+    - name: Ensure klvm, klvm_rs, klvm_tools are installed
       run: |
         . ./venv/bin/activate
-        arch -arm64 python -c 'import clvm'
-        arch -arm64 python -c 'import clvm; print(clvm.__file__)'
-        arch -arm64 python -c 'import clvm_rs; print(clvm_rs.__file__)'
-        arch -arm64 python -c 'import clvm_tools; print(clvm_tools.__file__)'
-        arch -arm64 python -c 'import clvm_tools_rs; print(clvm_tools_rs.__file__)'
+        arch -arm64 python -c 'import klvm'
+        arch -arm64 python -c 'import klvm; print(klvm.__file__)'
+        arch -arm64 python -c 'import klvm_rs; print(klvm_rs.__file__)'
+        arch -arm64 python -c 'import klvm_tools; print(klvm_tools.__file__)'
+        arch -arm64 python -c 'import klvm_tools_rs; print(klvm_tools_rs.__file__)'
 
 # Cost tests are currently failing.
-#    - name: Run tests from clvm
+#    - name: Run tests from klvm
 #      run: |
 #        . ./venv/bin/activate
-#        cd clvm
+#        cd klvm
 #        arch -arm64 python -m py.test tests
 
-    - name: Run tests from clvm_tools
+    - name: Run tests from klvm_tools
       continue-on-error: true
       run: |
         . ./venv/bin/activate
-        cd clvm_tools_rs
+        cd klvm_tools_rs
         arch -arm64 cargo test
 
     - name: Upload wheels

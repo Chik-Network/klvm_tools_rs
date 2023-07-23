@@ -4,27 +4,27 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::chia_dialect::{ChiaDialect, NO_NEG_DIV, NO_UNKNOWN_OPS};
-use clvm_rs::cost::Cost;
-use clvm_rs::dialect::Dialect;
-use clvm_rs::reduction::{EvalErr, Reduction, Response};
-use clvm_rs::run_program::run_program;
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::chik_dialect::{ChikDialect, NO_NEG_DIV, NO_UNKNOWN_OPS};
+use klvm_rs::cost::Cost;
+use klvm_rs::dialect::Dialect;
+use klvm_rs::reduction::{EvalErr, Reduction, Response};
+use klvm_rs::run_program::run_program;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
 
-use crate::classic::clvm::keyword_from_atom;
-use crate::classic::clvm::sexp::proper_list;
+use crate::classic::klvm::keyword_from_atom;
+use crate::classic::klvm::sexp::proper_list;
 
-use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble_to_ir_with_kw};
-use crate::classic::clvm_tools::ir::reader::read_ir;
-use crate::classic::clvm_tools::ir::writer::write_ir_to_stream;
-use crate::classic::clvm_tools::sha256tree::TreeHash;
-use crate::classic::clvm_tools::stages::stage_0::{
+use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble_to_ir_with_kw};
+use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::ir::writer::write_ir_to_stream;
+use crate::classic::klvm_tools::sha256tree::TreeHash;
+use crate::classic::klvm_tools::stages::stage_0::{
     DefaultProgramRunner, RunProgramOption, TRunProgram,
 };
-use crate::classic::clvm_tools::stages::stage_2::compile::do_com_prog_for_dialect;
-use crate::classic::clvm_tools::stages::stage_2::optimize::do_optimize;
+use crate::classic::klvm_tools::stages::stage_2::compile::do_com_prog_for_dialect;
+use crate::classic::klvm_tools::stages::stage_2::optimize::do_optimize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AllocatorRefOrTreeHash {
@@ -59,7 +59,7 @@ pub struct CompilerOperators {
 // This wrapper object is here to hold a drop trait that untangles CompilerOperatorsInternal.
 // The design of this code requires the lifetime of the compiler object (via Rc<dyn TRunProgram>)
 // to be uncertain from rust's perspective (i'm not given a lifetime parameter for the runnable
-// passed to clvmr, so I chose this way to mitigate the lack of specifiable lifetime as passing
+// passed to klvmr, so I chose this way to mitigate the lack of specifiable lifetime as passing
 // down a reference became very hairy.  The downside is that a few objects had become fixed in
 // an Rc cycle.  The drop trait below corrects that.
 impl CompilerOperators {
@@ -82,7 +82,7 @@ impl Drop for CompilerOperators {
 
 impl CompilerOperatorsInternal {
     pub fn new(source_file: &str, search_paths: Vec<String>, symbols_extra_info: bool) -> Self {
-        let base_dialect = Rc::new(ChiaDialect::new(NO_NEG_DIV | NO_UNKNOWN_OPS));
+        let base_dialect = Rc::new(ChikDialect::new(NO_NEG_DIV | NO_UNKNOWN_OPS));
         let base_runner = Rc::new(DefaultProgramRunner::new());
         CompilerOperatorsInternal {
             base_dialect,

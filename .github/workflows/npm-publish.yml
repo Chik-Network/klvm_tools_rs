@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: npm-pkg
-          path: ./wasm/pkg/clvm_tools_wasm-*.tgz
+          path: ./wasm/pkg/klvm_tools_wasm-*.tgz
 
       - name: Test for secrets access
         id: check_secrets
@@ -64,5 +64,5 @@ jobs:
         shell: bash
         run: |
           cd wasm/pkg
-          rm -f clvm_tools_wasm-*.tgz
+          rm -f klvm_tools_wasm-*.tgz
           npm publish --access public

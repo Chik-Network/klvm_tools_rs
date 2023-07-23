@@ -10,7 +10,7 @@
 ; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
 ; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
 
-  (include condition_codes.clvm)
+  (include condition_codes.klvm)
   (include curry-and-treehash.clinc)
   (include singleton_truths.clib)
 

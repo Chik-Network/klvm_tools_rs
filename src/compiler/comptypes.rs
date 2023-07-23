@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::clvm::sha256tree;
+use crate::compiler::klvm::sha256tree;
 use crate::compiler::sexp::{decode_string, SExp};
 use crate::compiler::srcloc::Srcloc;
 

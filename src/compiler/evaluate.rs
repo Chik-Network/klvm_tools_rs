@@ -4,18 +4,18 @@ use std::rc::Rc;
 
 use num_bigint::ToBigInt;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero};
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero};
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::clvm::run;
 use crate::compiler::codegen::codegen;
 use crate::compiler::compiler::is_at_capture;
 use crate::compiler::comptypes::{
     Binding, BodyForm, CompileErr, CompileForm, CompilerOpts, HelperForm, LetData, LetFormKind,
 };
 use crate::compiler::frontend::frontend;
+use crate::compiler::klvm::run;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
@@ -911,7 +911,7 @@ impl Evaluator {
     // A frontend language evaluator and minifier
     pub fn shrink_bodyform_visited(
         &self,
-        allocator: &mut Allocator, // Support random prims via clvm_rs
+        allocator: &mut Allocator, // Support random prims via klvm_rs
         visited: &mut HashMap<Vec<u8>, Rc<BodyForm>>,
         prog_args: Rc<SExp>,
         env: &HashMap<Vec<u8>, Rc<BodyForm>>,
@@ -1078,14 +1078,14 @@ impl Evaluator {
 
     pub fn shrink_bodyform(
         &self,
-        allocator: &mut Allocator, // Support random prims via clvm_rs
+        allocator: &mut Allocator, // Support random prims via klvm_rs
         prog_args: Rc<SExp>,
         env: &HashMap<Vec<u8>, Rc<BodyForm>>,
         body: Rc<BodyForm>,
         only_inline: bool,
     ) -> Result<Rc<BodyForm>, CompileErr> {
         self.shrink_bodyform_visited(
-            allocator, // Support random prims via clvm_rs
+            allocator, // Support random prims via klvm_rs
             &mut HashMap::new(),
             prog_args,
             env,
@@ -1096,7 +1096,7 @@ impl Evaluator {
 
     fn expand_macro(
         &self,
-        allocator: &mut Allocator, // Support random prims via clvm_rs
+        allocator: &mut Allocator, // Support random prims via klvm_rs
         call_loc: Srcloc,
         program: Rc<CompileForm>,
         args: Rc<SExp>,

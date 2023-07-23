@@ -3,18 +3,18 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::string::String;
 
-use clvm_rs::allocator::{Allocator, AtomBuf, NodePtr, SExp};
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator::{Allocator, AtomBuf, NodePtr, SExp};
+use klvm_rs::reduction::EvalErr;
 
 use bls12_381::G1Affine;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::clvm::serialize::sexp_to_stream;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm::serialize::sexp_to_stream;
 use crate::util::{u8_from_number, Number};
 
 #[derive(Debug)]
 pub enum CastableType {
-    CLVMObject(NodePtr),
+    KLVMObject(NodePtr),
     Bytes(Bytes),
     String(String),
     Number(Number),
@@ -53,14 +53,14 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
         match op {
             SexpStackOp::OpConvert => {
                 match top.borrow() {
-                    CastableType::CLVMObject(_) => {
+                    CastableType::KLVMObject(_) => {
                         stack.push(top.clone());
                     }
                     CastableType::TupleOf(left, right) => {
                         let target_index = stack.len();
                         match allocator.new_pair(allocator.null(), allocator.null()) {
                             Ok(pair) => {
-                                stack.push(Rc::new(CastableType::CLVMObject(pair)));
+                                stack.push(Rc::new(CastableType::KLVMObject(pair)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -76,7 +76,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     }
                     CastableType::ListOf(_sel, v) => {
                         let target_index = stack.len();
-                        stack.push(Rc::new(CastableType::CLVMObject(allocator.null())));
+                        stack.push(Rc::new(CastableType::KLVMObject(allocator.null())));
                         for vi in v.iter().take(v.len() - 1) {
                             stack.push(vi.clone());
                             ops.push(SexpStackOp::OpPrepend(target_index));
@@ -86,7 +86,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     }
                     CastableType::Bytes(b) => match allocator.new_atom(b.data()) {
                         Ok(a) => {
-                            stack.push(Rc::new(CastableType::CLVMObject(a)));
+                            stack.push(Rc::new(CastableType::KLVMObject(a)));
                         }
                         Err(e) => {
                             return Err(e);
@@ -95,7 +95,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     CastableType::String(s) => {
                         match allocator.new_atom(s.as_bytes()) {
                             Ok(a) => {
-                                stack.push(Rc::new(CastableType::CLVMObject(a)));
+                                stack.push(Rc::new(CastableType::KLVMObject(a)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -105,7 +105,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     CastableType::Number(n) => {
                         match allocator.new_atom(&u8_from_number(n.clone())) {
                             Ok(a) => {
-                                stack.push(Rc::new(CastableType::CLVMObject(a)));
+                                stack.push(Rc::new(CastableType::KLVMObject(a)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -117,7 +117,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
 
                         match allocator.new_atom(bytes_ver.data()) {
                             Ok(a) => {
-                                stack.push(Rc::new(CastableType::CLVMObject(a)));
+                                stack.push(Rc::new(CastableType::KLVMObject(a)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -127,13 +127,13 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                 }
             }
             SexpStackOp::OpSetPair(toset, target) => match top.borrow() {
-                CastableType::CLVMObject(new_value) => match stack[target].borrow() {
-                    CastableType::CLVMObject(target_value) => match allocator.sexp(*target_value) {
+                CastableType::KLVMObject(new_value) => match stack[target].borrow() {
+                    CastableType::KLVMObject(target_value) => match allocator.sexp(*target_value) {
                         SExp::Pair(l, r) => {
                             if toset {
                                 match allocator.new_pair(l, *new_value) {
                                     Ok(pair) => {
-                                        stack[target] = Rc::new(CastableType::CLVMObject(pair));
+                                        stack[target] = Rc::new(CastableType::KLVMObject(pair));
                                     }
                                     Err(e) => {
                                         return Err(e);
@@ -142,7 +142,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                             } else {
                                 match allocator.new_pair(*new_value, r) {
                                     Ok(pair) => {
-                                        stack[target] = Rc::new(CastableType::CLVMObject(pair));
+                                        stack[target] = Rc::new(CastableType::KLVMObject(pair));
                                     }
                                     Err(e) => {
                                         return Err(e);
@@ -176,10 +176,10 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
             },
 
             SexpStackOp::OpPrepend(target) => match top.borrow() {
-                CastableType::CLVMObject(f) => match stack[target].borrow() {
-                    CastableType::CLVMObject(o) => match allocator.new_pair(*f, *o) {
+                CastableType::KLVMObject(f) => match stack[target].borrow() {
+                    CastableType::KLVMObject(o) => match allocator.new_pair(*f, *o) {
                         Ok(pair) => {
-                            stack[target] = Rc::new(CastableType::CLVMObject(pair));
+                            stack[target] = Rc::new(CastableType::KLVMObject(pair));
                         }
                         Err(e) => {
                             return Err(e);
@@ -212,7 +212,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
     return match stack.pop() {
         None => Err(EvalErr(allocator.null(), "stack empty".to_string())),
         Some(top) => match top.borrow() {
-            CastableType::CLVMObject(o) => Ok(*o),
+            CastableType::KLVMObject(o) => Ok(*o),
             _ => Err(EvalErr(
                 allocator.null(),
                 format!("unimplemented {:?}", stack[0]),
@@ -235,21 +235,21 @@ pub fn bool_sexp(allocator: &mut Allocator, b: bool) -> NodePtr {
     }
 }
 
-// export class SExp implements CLVMType {
+// export class SExp implements KLVMType {
 //   atom: Optional<Bytes> = None;
-//   // this is always a 2-tuple of an object implementing the CLVM object protocol.
+//   // this is always a 2-tuple of an object implementing the KLVM object protocol.
 //   pair: Optional<Tuple<any, any>> = None;
 
-//   static readonly TRUE: SExp = new SExp(new CLVMObject(Bytes.from("0x01", "hex")));
-//   static readonly FALSE: SExp = new SExp(new CLVMObject(Bytes.NULL));
-//   static readonly __NULL__: SExp = new SExp(new CLVMObject(Bytes.NULL));
+//   static readonly TRUE: SExp = new SExp(new KLVMObject(Bytes.from("0x01", "hex")));
+//   static readonly FALSE: SExp = new SExp(new KLVMObject(Bytes.NULL));
+//   static readonly __NULL__: SExp = new SExp(new KLVMObject(Bytes.NULL));
 
 //   static to(v: CastableType): SExp {
 //     if(isSExp(v)){
 //       return v;
 //     }
 
-//     if(looks_like_clvm_object(v)){
+//     if(looks_like_klvm_object(v)){
 //       return new SExp(v);
 //     }
 

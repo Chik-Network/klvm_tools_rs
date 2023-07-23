@@ -1,9 +1,9 @@
 use num_bigint::ToBigInt;
 
-use clvm_rs::allocator::Allocator;
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator::Allocator;
+use klvm_rs::reduction::EvalErr;
 
-use crate::classic::clvm::__type_compatibility__::{
+use crate::classic::klvm::__type_compatibility__::{
     bi_one, bi_zero, get_u32, Bytes, BytesFromType,
 };
 use crate::util::Number;
@@ -120,13 +120,13 @@ pub fn bigint_to_bytes_unsigned(v: &Number) -> Bytes {
     Bytes::new(Some(BytesFromType::Raw(result)))
 }
 
-// Pulled in code from clvm_rs to replace this function, re: PR comments.
+// Pulled in code from klvm_rs to replace this function, re: PR comments.
 // The whole function relies on allocator so this is just the brass tacks.
 // Conversion type was here for completeness in the original code I ported
 // from the typescript.
 //
 // The unsigned option is easier, as used in as_path.
-pub fn bigint_to_bytes_clvm(v: &Number) -> Bytes {
+pub fn bigint_to_bytes_klvm(v: &Number) -> Bytes {
     let bytes: Vec<u8> = v.to_signed_bytes_be();
     let mut slice = bytes.as_slice();
 

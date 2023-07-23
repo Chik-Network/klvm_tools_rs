@@ -5,12 +5,11 @@ use std::rc::Rc;
 
 use num_bigint::ToBigInt;
 
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
-use clvm_rs::allocator::Allocator;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::bi_one;
+use crate::classic::klvm::__type_compatibility__::bi_one;
 
-use crate::compiler::clvm::run;
 use crate::compiler::compiler::{is_at_capture, run_optimizer};
 use crate::compiler::comptypes::{
     fold_m, join_vecs_to_string, list_to_cons, Binding, BodyForm, Callable, CompileErr,
@@ -21,6 +20,7 @@ use crate::compiler::debug::{build_swap_table_mut, relabel};
 use crate::compiler::frontend::compile_bodyform;
 use crate::compiler::gensym::gensym;
 use crate::compiler::inline::{replace_in_inline, synthesize_args};
+use crate::compiler::klvm::run;
 use crate::compiler::optimize::optimize_expr;
 use crate::compiler::prims::{primapply, primcons, primquote};
 use crate::compiler::runtypes::RunFailure;

@@ -25,9 +25,9 @@
 
 use num_bigint::ToBigInt;
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero, Bytes};
-use crate::classic::clvm::casts::{
-    bigint_from_bytes, bigint_to_bytes_clvm, bigint_to_bytes_unsigned,
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero, Bytes};
+use crate::classic::klvm::casts::{
+    bigint_from_bytes, bigint_to_bytes_klvm, bigint_to_bytes_unsigned,
 };
 use crate::util::Number;
 
@@ -71,7 +71,7 @@ impl NodePath {
         match index {
             Some(index) => {
                 if index < bi_zero() {
-                    let bytes_repr = bigint_to_bytes_clvm(&index);
+                    let bytes_repr = bigint_to_bytes_klvm(&index);
                     let unsigned = bigint_from_bytes(&bytes_repr, None);
                     NodePath { index: unsigned }
                 } else {

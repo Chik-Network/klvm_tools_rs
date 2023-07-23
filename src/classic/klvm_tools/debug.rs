@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::reduction::EvalErr;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::clvm::serialize::sexp_to_stream;
-use crate::classic::clvm::sexp::{enlist, map_m, proper_list, rest};
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm::serialize::sexp_to_stream;
+use crate::classic::klvm::sexp::{enlist, map_m, proper_list, rest};
 
-use crate::classic::clvm_tools::sha256tree::sha256tree;
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::sha256tree::sha256tree;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
 use crate::compiler::frontend::frontend;

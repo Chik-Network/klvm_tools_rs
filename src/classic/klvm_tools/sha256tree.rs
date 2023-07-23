@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
 
-use crate::classic::clvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
+use crate::classic::klvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TreeHash {

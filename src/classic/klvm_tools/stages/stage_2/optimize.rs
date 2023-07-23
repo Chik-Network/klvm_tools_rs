@@ -6,21 +6,21 @@ use std::rc::Rc;
 
 use num_bigint::ToBigInt;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::cost::Cost;
-use clvm_rs::reduction::{EvalErr, Reduction, Response};
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::cost::Cost;
+use klvm_rs::reduction::{EvalErr, Reduction, Response};
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero};
-use crate::classic::clvm::sexp::{
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero};
+use crate::classic::klvm::sexp::{
     atom, enlist, equal_to, first, fold_m, map_m, non_nil, proper_list,
 };
-use crate::classic::clvm_tools::binutils::disassemble;
-use crate::classic::clvm_tools::node_path::NodePath;
-use crate::classic::clvm_tools::pattern_match::match_sexp;
-use crate::classic::clvm_tools::stages::assemble;
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
-use crate::classic::clvm_tools::stages::stage_2::helpers::quote;
-use crate::classic::clvm_tools::stages::stage_2::operators::AllocatorRefOrTreeHash;
+use crate::classic::klvm_tools::binutils::disassemble;
+use crate::classic::klvm_tools::node_path::NodePath;
+use crate::classic::klvm_tools::pattern_match::match_sexp;
+use crate::classic::klvm_tools::stages::assemble;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_2::helpers::quote;
+use crate::classic::klvm_tools::stages::stage_2::operators::AllocatorRefOrTreeHash;
 
 use crate::util::{number_from_u8, u8_from_number};
 
@@ -652,7 +652,7 @@ pub fn optimize_sexp_(
     }
 
     /*
-     * Optimize an s-expression R written for clvm to R_opt where
+     * Optimize an s-expression R written for klvm to R_opt where
      * (a R args) == (a R_opt args) for ANY args.
      */
     let optimizers: Vec<OptimizerRunner> = vec![

@@ -11,21 +11,21 @@ use std::borrow::Borrow;
 use std::fs;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero, Bytes, BytesFromType};
-use crate::classic::clvm::casts::{bigint_to_bytes_clvm, bigint_to_bytes_unsigned};
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero, Bytes, BytesFromType};
+use crate::classic::klvm::casts::{bigint_to_bytes_klvm, bigint_to_bytes_unsigned};
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 
-use crate::compiler::clvm::{parse_and_run, sha256tree};
+use crate::compiler::klvm::{parse_and_run, sha256tree};
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;
-use crate::tests::classic::run::RandomClvmNumber;
+use crate::tests::classic::run::RandomKlvmNumber;
 
 use crate::util::Number;
 
-fn test_compiler_clvm(to_run: &String, args: &String) -> Result<Rc<SExp>, RunFailure> {
+fn test_compiler_klvm(to_run: &String, args: &String) -> Result<Rc<SExp>, RunFailure> {
     let mut allocator = Allocator::new();
     let runner = Rc::new(DefaultProgramRunner::new());
     parse_and_run(
@@ -101,9 +101,9 @@ fn test_sexp_parse_8() {
 }
 
 #[test]
-fn test_clvm_1() {
+fn test_klvm_1() {
     let loc = Srcloc::start(&"*test*".to_string());
-    let result = test_compiler_clvm(
+    let result = test_compiler_klvm(
         &"(a (q 2 4 (c 2 (c 6 ()))) (c (q 13 26729 \"there\" \"fool\") 1))".to_string(),
         &"()".to_string(),
     )
@@ -114,10 +114,10 @@ fn test_clvm_1() {
 }
 
 #[test]
-fn test_clvm_2() {
+fn test_klvm_2() {
     let loc = Srcloc::start(&"*test*".to_string());
     let result =
-        test_compiler_clvm(
+        test_compiler_klvm(
             &"(a (q 2 (q 2 2 (c 2 (c 3 (q)))) (c (q 2 (i 5 (q 4 (q . 4) (c 9 (c (a 2 (c 2 (c 13 (q)))) (q)))) (q 1)) 1) 1)) 1)".to_string(),
             &"(1 2)".to_string(),
         ).unwrap();
@@ -127,9 +127,9 @@ fn test_clvm_2() {
 }
 
 #[test]
-fn test_clvm_3() {
+fn test_klvm_3() {
     let loc = Srcloc::start(&"*test*".to_string());
-    let result = test_compiler_clvm(
+    let result = test_compiler_klvm(
         &"(2 (3 (1) (1 16 (1 . 1) (1 . 3)) (1 16 (1 . 5) (1 . 8))) 1)".to_string(),
         &"()".to_string(),
     )
@@ -140,9 +140,9 @@ fn test_clvm_3() {
 }
 
 #[test]
-fn test_clvm_4() {
+fn test_klvm_4() {
     let loc = Srcloc::start(&"*test*".to_string());
-    let result = test_compiler_clvm(
+    let result = test_compiler_klvm(
         &"(divmod (1 . 300000003392) (1 . 10000000))".to_string(),
         &"()".to_string(),
     )
@@ -168,9 +168,9 @@ fn does_number_need_extension_byte(n: Number) -> bool {
 fn test_random_int_just_the_conversion_functions_and_no_other_things_from_the_stack_1() {
     let mut rng = ChaChaRng::from_entropy();
     for _ in 1..=200 {
-        let number_spec: RandomClvmNumber = rng.gen();
+        let number_spec: RandomKlvmNumber = rng.gen();
 
-        let to_bytes_clvm = bigint_to_bytes_clvm(&number_spec.intended_value).raw();
+        let to_bytes_klvm = bigint_to_bytes_klvm(&number_spec.intended_value).raw();
         let to_bytes_unsigned = if number_spec.intended_value < bi_zero() {
             None
         } else {
@@ -178,7 +178,7 @@ fn test_random_int_just_the_conversion_functions_and_no_other_things_from_the_st
         };
 
         if number_spec.intended_value == bi_zero() {
-            assert!(to_bytes_clvm.is_empty());
+            assert!(to_bytes_klvm.is_empty());
             if let Some(usbi) = &to_bytes_unsigned {
                 assert!(usbi.is_empty());
             }
@@ -188,16 +188,16 @@ fn test_random_int_just_the_conversion_functions_and_no_other_things_from_the_st
         // Determine whether an extension byte would be needed.
         let need_ext_byte = does_number_need_extension_byte(number_spec.intended_value.clone());
         if need_ext_byte {
-            assert_eq!(to_bytes_clvm[0], 0);
+            assert_eq!(to_bytes_klvm[0], 0);
             if let Some(usbi) = &to_bytes_unsigned {
                 assert_eq!(usbi[0] & 0x80, 0x80);
             }
         }
 
-        // Check clvm repr
+        // Check klvm repr
         let one_byte_size = 256_u32.to_bigint().unwrap();
         let mut check_value = number_spec.intended_value.clone();
-        for b in to_bytes_clvm.iter().rev() {
+        for b in to_bytes_klvm.iter().rev() {
             let isolated_byte = check_value.clone() & (one_byte_size.clone() - bi_one());
             check_value >>= 8;
             assert_eq!(isolated_byte, b.to_bigint().unwrap());
@@ -217,11 +217,11 @@ fn test_random_int_just_the_conversion_functions_and_no_other_things_from_the_st
 
 #[test]
 fn test_sha256_tree_hash() {
-    let filename = "resources/tests/assert.clvm.out";
-    let assert_clvm_compiled = fs::read_to_string(filename).expect("should exist");
+    let filename = "resources/tests/assert.klvm.out";
+    let assert_klvm_compiled = fs::read_to_string(filename).expect("should exist");
     let parsed = parse_sexp(
         Srcloc::start(filename),
-        assert_clvm_compiled.as_bytes().iter().copied(),
+        assert_klvm_compiled.as_bytes().iter().copied(),
     )
     .expect("should parse");
     let hash_result = Bytes::new(Some(BytesFromType::Raw(sha256tree(parsed[0].clone())))).hex();

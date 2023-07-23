@@ -1,9 +1,9 @@
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero};
-use crate::classic::clvm::sexp::{enlist, proper_list};
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero};
+use crate::classic::klvm::sexp::{enlist, proper_list};
 use crate::compiler::gensym::gensym;
 use crate::util::Number;
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::reduction::EvalErr;
 use num_bigint::ToBigInt;
 use std::collections::HashMap;
 
@@ -33,10 +33,10 @@ fn wrap_in_unquote(allocator: &mut Allocator, code: NodePtr) -> Result<NodePtr, 
     enlist(allocator, &[unquote_atom, code])
 }
 
-// (__chia__enlist X)
+// (__chik__enlist X)
 fn wrap_in_compile_time_list(allocator: &mut Allocator, code: NodePtr) -> Result<NodePtr, EvalErr> {
-    let chia_enlist_atom = allocator.new_atom("__chia__enlist".as_bytes())?;
-    enlist(allocator, &[chia_enlist_atom, code])
+    let chik_enlist_atom = allocator.new_atom("__chik__enlist".as_bytes())?;
+    enlist(allocator, &[chik_enlist_atom, code])
 }
 
 // Create the sequence of individual tree moves that will translate to
@@ -172,7 +172,7 @@ fn formulate_path_selections_for_destructuring_arg(
 //   (defun-inline F ((A B C)) (+ A B C))
 //
 // Without supporting destructuring consciously, this will be turned by
-// classic chialisp into a macro like this:
+// classic chiklisp into a macro like this:
 //
 //   (defmacro F ((A B C)) (+ A B C))
 //
@@ -214,7 +214,7 @@ fn formulate_path_selections_for_destructuring_arg(
 //
 // So we need a macro like "list" that starts not from the entire input
 // environment but that destructures just its first argument as a list,
-// so i adapted list into __chia__enlist.
+// so i adapted list into __chik__enlist.
 // When so wrapped, the user may then destructure the capture argument.
 pub fn formulate_path_selections_for_destructuring(
     allocator: &mut Allocator,
@@ -255,7 +255,7 @@ pub fn formulate_path_selections_for_destructuring(
 }
 
 // If true, these arguments represent a destructuring of some kind.
-// In the case of inlines in classic chialisp, we must adjust how arguments
+// In the case of inlines in classic chiklisp, we must adjust how arguments
 // are passed down to the macro body that gets created for the inline function.
 pub fn is_inline_destructure(allocator: &mut Allocator, args_sexp: NodePtr) -> bool {
     if let SExp::Pair(a, b) = allocator.sexp(args_sexp) {

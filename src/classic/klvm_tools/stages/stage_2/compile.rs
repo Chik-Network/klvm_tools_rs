@@ -1,18 +1,18 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use clvm_rs::allocator::{Allocator, AtomBuf, NodePtr, SExp};
-use clvm_rs::reduction::{EvalErr, Reduction, Response};
+use klvm_rs::allocator::{Allocator, AtomBuf, NodePtr, SExp};
+use klvm_rs::reduction::{EvalErr, Reduction, Response};
 
-use crate::classic::clvm::sexp::{enlist, first, map_m, non_nil, proper_list, rest};
-use crate::classic::clvm::{keyword_from_atom, keyword_to_atom};
+use crate::classic::klvm::sexp::{enlist, first, map_m, non_nil, proper_list, rest};
+use crate::classic::klvm::{keyword_from_atom, keyword_to_atom};
 
-use crate::classic::clvm_tools::binutils::disassemble;
-use crate::classic::clvm_tools::node_path::NodePath;
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
-use crate::classic::clvm_tools::stages::stage_2::defaults::default_macro_lookup;
-use crate::classic::clvm_tools::stages::stage_2::helpers::{brun, evaluate, quote};
-use crate::classic::clvm_tools::stages::stage_2::module::compile_mod;
+use crate::classic::klvm_tools::binutils::disassemble;
+use crate::classic::klvm_tools::node_path::NodePath;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_2::defaults::default_macro_lookup;
+use crate::classic::klvm_tools::stages::stage_2::helpers::{brun, evaluate, quote};
+use crate::classic::klvm_tools::stages::stage_2::module::compile_mod;
 
 const DIAG_OUTPUT: bool = false;
 
@@ -612,7 +612,7 @@ fn do_com_prog_(
     run_program: Rc<dyn TRunProgram>,
 ) -> Response {
     /*
-     * Turn the given program `prog` into a clvm program using
+     * Turn the given program `prog` into a klvm program using
      * the macros to do transformation.
      * prog is an uncompiled s-expression.
      * Return a new expanded s-expression PROG_EXP that is equivalent by rewriting

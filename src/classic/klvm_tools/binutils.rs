@@ -4,14 +4,14 @@ use std::rc::Rc;
 use encoding8::ascii::is_printable;
 use unicode_segmentation::UnicodeSegmentation;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::reduction::EvalErr;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Record, Stream};
-use crate::classic::clvm::{keyword_from_atom, keyword_to_atom};
-use crate::classic::clvm_tools::ir::r#type::IRRepr;
-use crate::classic::clvm_tools::ir::reader::IRReader;
-use crate::classic::clvm_tools::ir::writer::write_ir;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Record, Stream};
+use crate::classic::klvm::{keyword_from_atom, keyword_to_atom};
+use crate::classic::klvm_tools::ir::r#type::IRRepr;
+use crate::classic::klvm_tools::ir::reader::IRReader;
+use crate::classic::klvm_tools::ir::writer::write_ir;
 
 pub fn is_printable_string(s: &str) -> bool {
     for ch in s.graphemes(true) {

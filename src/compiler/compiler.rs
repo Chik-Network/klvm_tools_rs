@@ -5,19 +5,19 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero};
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
-use crate::classic::clvm_tools::stages::stage_2::optimize::optimize_sexp;
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero};
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_2::optimize::optimize_sexp;
 
-use crate::compiler::clvm::{convert_from_clvm_rs, convert_to_clvm_rs, sha256tree};
 use crate::compiler::codegen::codegen;
 use crate::compiler::comptypes::{
     CompileErr, CompileForm, CompilerOpts, DefunData, HelperForm, PrimaryCodegen,
 };
 use crate::compiler::evaluate::{build_reflex_captures, Evaluator};
 use crate::compiler::frontend::frontend;
+use crate::compiler::klvm::{convert_from_klvm_rs, convert_to_klvm_rs, sha256tree};
 use crate::compiler::prims;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{parse_sexp, SExp};
@@ -30,14 +30,14 @@ lazy_static! {
         known_dialects.insert(
             "*standard-cl-21*".to_string(),
             indoc! {"(
-           (defconstant *chialisp-version* 21)
+           (defconstant *chiklisp-version* 21)
         )"}
             .to_string(),
         );
         known_dialects.insert(
             "*standard-cl-22*".to_string(),
             indoc! {"(
-           (defconstant *chialisp-version* 22)
+           (defconstant *chiklisp-version* 22)
         )"}
             .to_string(),
         );
@@ -205,18 +205,18 @@ pub fn run_optimizer(
     runner: Rc<dyn TRunProgram>,
     r: Rc<SExp>,
 ) -> Result<Rc<SExp>, CompileErr> {
-    let to_clvm_rs = convert_to_clvm_rs(allocator, r.clone())
+    let to_klvm_rs = convert_to_klvm_rs(allocator, r.clone())
         .map(|x| (r.loc(), x))
         .map_err(|e| match e {
             RunFailure::RunErr(l, e) => CompileErr(l, e),
             RunFailure::RunExn(s, e) => CompileErr(s, format!("exception {}\n", e)),
         })?;
 
-    let optimized = optimize_sexp(allocator, to_clvm_rs.1, runner)
-        .map_err(|e| CompileErr(to_clvm_rs.0.clone(), e.1))
-        .map(|x| (to_clvm_rs.0, x))?;
+    let optimized = optimize_sexp(allocator, to_klvm_rs.1, runner)
+        .map_err(|e| CompileErr(to_klvm_rs.0.clone(), e.1))
+        .map(|x| (to_klvm_rs.0, x))?;
 
-    convert_from_clvm_rs(allocator, optimized.0, optimized.1).map_err(|e| match e {
+    convert_from_klvm_rs(allocator, optimized.0, optimized.1).map_err(|e| match e {
         RunFailure::RunErr(l, e) => CompileErr(l, e),
         RunFailure::RunExn(s, e) => CompileErr(s, format!("exception {}\n", e)),
     })
@@ -455,7 +455,7 @@ pub fn is_cons(atom: &SExp) -> bool {
     is_operator(4, atom)
 }
 
-// Extracts the environment from a clvm program that contains one.
+// Extracts the environment from a klvm program that contains one.
 // The usual form of a program to analyze is:
 // (2 main (4 env 1))
 pub fn extract_program_and_env(program: Rc<SExp>) -> Option<(Rc<SExp>, Rc<SExp>)> {
