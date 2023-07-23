@@ -2,18 +2,22 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use klvm_rs::allocator;
-use klvm_rs::allocator::{Allocator, NodePtr};
+use clvm_rs::allocator;
+use clvm_rs::allocator::{Allocator, NodePtr};
 
 use num_bigint::ToBigInt;
 
-use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero, sha256, Bytes, BytesFromType};
-use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use sha2::Digest;
+use sha2::Sha256;
+
+use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero};
+use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::prims;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;
+
 use crate::util::{number_from_u8, u8_from_number, Number};
 
 #[derive(Clone, Debug)]
@@ -116,7 +120,7 @@ fn translate_head(
             SExp::Nil(_l1) => run(allocator, runner, prim_map, sexp.clone(), context),
             _ => Err(RunFailure::RunErr(
                 sexp.loc(),
-                format!("Unexpected head form in klvm {}", sexp),
+                format!("Unexpected head form in clvm {}", sexp),
             )),
         },
     }
@@ -159,7 +163,7 @@ fn eval_args(
     }
 }
 
-pub fn convert_to_klvm_rs(
+pub fn convert_to_clvm_rs(
     allocator: &mut Allocator,
     head: Rc<SExp>,
 ) -> Result<NodePtr, RunFailure> {
@@ -182,8 +186,8 @@ pub fn convert_to_klvm_rs(
                     })
             }
         }
-        SExp::Cons(_, a, b) => convert_to_klvm_rs(allocator, a.clone()).and_then(|head| {
-            convert_to_klvm_rs(allocator, b.clone()).and_then(|tail| {
+        SExp::Cons(_, a, b) => convert_to_clvm_rs(allocator, a.clone()).and_then(|head| {
+            convert_to_clvm_rs(allocator, b.clone()).and_then(|tail| {
                 allocator.new_pair(head, tail).map_err(|_e| {
                     RunFailure::RunErr(a.loc(), format!("failed to alloc cons {}", head))
                 })
@@ -192,7 +196,7 @@ pub fn convert_to_klvm_rs(
     }
 }
 
-pub fn convert_from_klvm_rs(
+pub fn convert_from_clvm_rs(
     allocator: &mut Allocator,
     loc: Srcloc,
     head: NodePtr,
@@ -214,8 +218,8 @@ pub fn convert_from_klvm_rs(
             }
         }
         allocator::SExp::Pair(a, b) => {
-            convert_from_klvm_rs(allocator, loc.clone(), a).and_then(|h| {
-                convert_from_klvm_rs(allocator, loc.clone(), b)
+            convert_from_clvm_rs(allocator, loc.clone(), a).and_then(|h| {
+                convert_from_clvm_rs(allocator, loc.clone(), b)
                     .map(|t| Rc::new(SExp::Cons(loc.clone(), h, t)))
             })
         }
@@ -254,8 +258,8 @@ fn apply_op(
         head.clone(),
         generate_argument_refs(5_i32.to_bigint().unwrap(), args),
     ));
-    let converted_app = convert_to_klvm_rs(allocator, application.clone())?;
-    let converted_args = convert_to_klvm_rs(allocator, wrapped_args.clone())?;
+    let converted_app = convert_to_clvm_rs(allocator, application.clone())?;
+    let converted_args = convert_to_clvm_rs(allocator, wrapped_args.clone())?;
 
     runner
         .run_program(allocator, converted_app, converted_args, None)
@@ -265,7 +269,7 @@ fn apply_op(
                 format!("{} in {} {}", e.1, application, wrapped_args),
             )
         })
-        .and_then(|v| convert_from_klvm_rs(allocator, head.loc(), v.1))
+        .and_then(|v| convert_from_clvm_rs(allocator, head.loc(), v.1))
 }
 
 fn atom_value(head: Rc<SExp>) -> Result<Number, RunFailure> {
@@ -581,9 +585,10 @@ pub fn parse_and_run(
     content: &str,
     args: &str,
 ) -> Result<Rc<SExp>, RunFailure> {
-    let code =
-        parse_sexp(Srcloc::start(file), content).map_err(|e| RunFailure::RunErr(e.0, e.1))?;
-    let args = parse_sexp(Srcloc::start(file), args).map_err(|e| RunFailure::RunErr(e.0, e.1))?;
+    let code = parse_sexp(Srcloc::start(file), content.bytes())
+        .map_err(|e| RunFailure::RunErr(e.0, e.1))?;
+    let args =
+        parse_sexp(Srcloc::start(file), args.bytes()).map_err(|e| RunFailure::RunErr(e.0, e.1))?;
 
     if code.is_empty() {
         Err(RunFailure::RunErr(
@@ -607,32 +612,28 @@ pub fn parse_and_run(
     }
 }
 
-fn sha256tree_from_atom(v: Vec<u8>) -> Vec<u8> {
-    sha256(
-        Bytes::new(Some(BytesFromType::Raw(vec![1])))
-            .concat(&Bytes::new(Some(BytesFromType::Raw(v)))),
-    )
-    .data()
-    .clone()
+pub fn sha256tree_from_atom(v: &[u8]) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update([1]);
+    hasher.update(v);
+    hasher.finalize().to_vec()
 }
 
 // sha256tree for modern style SExp
 pub fn sha256tree(s: Rc<SExp>) -> Vec<u8> {
     match s.borrow() {
         SExp::Cons(_l, a, b) => {
+            let mut hasher = Sha256::new();
             let t1 = sha256tree(a.clone());
             let t2 = sha256tree(b.clone());
-            sha256(
-                Bytes::new(Some(BytesFromType::Raw(vec![2])))
-                    .concat(&Bytes::new(Some(BytesFromType::Raw(t1))))
-                    .concat(&Bytes::new(Some(BytesFromType::Raw(t2)))),
-            )
-            .data()
-            .clone()
+            hasher.update([2]);
+            hasher.update(&t1);
+            hasher.update(&t2);
+            hasher.finalize().to_vec()
         }
-        SExp::Nil(_) => sha256tree_from_atom(vec![]),
-        SExp::Integer(_, i) => sha256tree_from_atom(u8_from_number(i.clone())),
-        SExp::QuotedString(_, _, v) => sha256tree_from_atom(v.clone()),
-        SExp::Atom(_, v) => sha256tree_from_atom(v.clone()),
+        SExp::Nil(_) => sha256tree_from_atom(&[]),
+        SExp::Integer(_, i) => sha256tree_from_atom(&u8_from_number(i.clone())),
+        SExp::QuotedString(_, _, v) => sha256tree_from_atom(v),
+        SExp::Atom(_, v) => sha256tree_from_atom(v),
     }
 }

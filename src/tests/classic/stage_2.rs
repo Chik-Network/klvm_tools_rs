@@ -1,13 +1,13 @@
-use klvmr::allocator::Allocator;
+use clvmr::allocator::Allocator;
 use std::rc::Rc;
 
-use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble};
-use crate::classic::klvm_tools::ir::reader::read_ir;
-use crate::classic::klvm_tools::stages::stage_2::compile::{
+use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble};
+use crate::classic::clvm_tools::ir::reader::read_ir;
+use crate::classic::clvm_tools::stages::stage_2::compile::{
     do_com_prog, try_expand_macro_for_atom,
 };
-use crate::classic::klvm_tools::stages::stage_2::helpers::brun;
-use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::clvm_tools::stages::stage_2::helpers::brun;
+use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
 
 fn test_expand_macro(
     allocator: &mut Allocator,
@@ -54,7 +54,7 @@ fn test_do_com_prog(
     macro_lookup_src: String,
     symbol_table_src: String,
 ) -> String {
-    let runner = run_program_for_search_paths(&vec![".".to_string()]);
+    let runner = run_program_for_search_paths("*test*", &vec![".".to_string()], false);
     let prog_ir = read_ir(&program_src).unwrap();
     let program = assemble_from_ir(allocator, Rc::new(prog_ir)).unwrap();
     let macro_ir = read_ir(&macro_lookup_src).unwrap();

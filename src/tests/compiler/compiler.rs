@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use klvm_rs::allocator::Allocator;
+use clvm_rs::allocator::Allocator;
 
-use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::compiler::clvm::run;
 use crate::compiler::compiler::{compile_file, DefaultCompilerOpts};
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
-use crate::compiler::klvm::run;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;
@@ -31,7 +31,8 @@ fn run_string_maybe_opt(
     opts = opts
         .set_frontend_opt(fe_opt)
         .set_search_paths(&vec!["resources/tests".to_string()]);
-    let sexp_args = parse_sexp(srcloc.clone(), &args).map_err(|e| CompileErr(e.0, e.1))?[0].clone();
+    let sexp_args =
+        parse_sexp(srcloc.clone(), args.bytes()).map_err(|e| CompileErr(e.0, e.1))?[0].clone();
 
     compile_file(
         &mut allocator,
@@ -531,7 +532,7 @@ fn test_defconstant() {
     let result =
         run_string(&indoc!{"
             (mod (password new_puzhash amount)
-              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
               (defconstant CREATE_COIN 51)
               (defun check-password (password)
                 (let ((password-hash (sha256 password))
@@ -613,7 +614,7 @@ fn test_at_destructure_1() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
               A
               )
         "}
@@ -630,7 +631,7 @@ fn test_at_destructure_2() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
               Z
               )
         "}
@@ -647,7 +648,7 @@ fn test_at_destructure_3() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
               B
               )
         "}
@@ -664,7 +665,7 @@ fn test_at_destructure_4() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
               C
               )
         "}
@@ -681,7 +682,7 @@ fn test_at_destructure_5() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
               D
               )
         "}
@@ -904,7 +905,7 @@ fn test_let_inline_1() {
 }
 
 #[test]
-fn read_of_hex_constant_in_modern_chiklisp() {
+fn read_of_hex_constant_in_modern_chialisp() {
     let result = run_string(
         &indoc! {"(mod () (include *standard-cl-21*) (sha256 (q . 1) (q . 0xf22ada22a0ed015000ea157013ee62dc6ce337a649ec01054fc62ed6caac7eaf)))"}
         .to_string(),
@@ -951,7 +952,7 @@ fn sebastian_hash_test_1() {
     let result = run_string(
         &indoc! {"
 (mod (MOD_HASH TOKEN_A_AMOUNT TOKEN_B_AMOUNT K token_a_delta token_b_delta)
-    (include \"condition_codes.klvm\")
+    (include \"condition_codes.clvm\")
     (include \"curry-and-treehash.clinc\")
     (include *standard-cl-21*)
 
@@ -995,7 +996,7 @@ fn sebastian_hash_test_2() {
     let result = run_string(
         &indoc! {"
 (mod (MOD_HASH TOKEN_A_AMOUNT TOKEN_B_AMOUNT K token_a_delta token_b_delta)
-    (include \"condition_codes.klvm\")
+    (include \"condition_codes.clvm\")
     (include \"curry-and-treehash.clinc\")
 
     (defun sha256tree1 (TREE)
@@ -1055,5 +1056,111 @@ fn test_modern_inline_at_capture() {
     )
     .unwrap_err();
 
-    assert_eq!(result.1, "klvm raise in (8 5) (() 99)");
+    assert_eq!(result.1, "clvm raise in (8 5) (() 99)");
+}
+
+#[test]
+fn test_modern_inline_recurse() {
+    // Test for a crash doing a recursive inline call.
+    run_string(
+        &"(mod () (include *standard-cl-21*) (defun-inline FOO (X) (FOO (+ X 1))) (FOO 3))"
+            .to_string(),
+        &"()".to_string(),
+    )
+    .unwrap_err();
+}
+
+#[test]
+fn test_modern_inline_recurse_deep() {
+    // Test for a crash doing a recursive inline call.
+    run_string(
+        &"(mod () (include *standard-cl-21*) (defun-inline BAR (X) (FOO (- X 1))) (defun-inline FOO (X) (BAR (+ X 1))) (FOO 3))".to_string(),
+        &"()".to_string()
+    ).unwrap_err();
+}
+
+#[test]
+fn test_modern_mod_form() {
+    let result = run_string(
+        &indoc! {"
+(mod () (include *standard-cl-21*) (a (mod (X) (+ 1 (* X 2))) (list 3)))
+"}
+        .to_string(),
+        &"()".to_string(),
+    )
+    .unwrap();
+
+    assert_eq!(result.to_string(), "7");
+}
+
+#[test]
+fn test_fuzz_seed_3956111146_1_alt_test_1() {
+    let res = run_string(
+        &"(mod () (include *standard-cl-21*) (q (r . lbvepvnoc) dbhk))".to_string(),
+        &"()".to_string(),
+    )
+    .unwrap();
+    assert_eq!(res.to_string(), "((r . lbvepvnoc) dbhk)");
+}
+
+#[test]
+fn test_fuzz_seed_3956111146_1() {
+    let res = run_string(
+        &"(mod () (include *standard-cl-21*) (q (r . lbvepvnoc) . dbhk))".to_string(),
+        &"()".to_string(),
+    )
+    .unwrap();
+    assert_eq!(res.to_string(), "((r . lbvepvnoc) . dbhk)");
+}
+
+#[test]
+fn arg_destructure_test_1() {
+    let prog = indoc! {"
+(mod
+  (
+      SINGLETON_MOD_HASH
+      LAUNCHER_HASH
+      launcher_id
+      . delegated_puzzle_hash
+  )
+
+  (include *standard-cl-21*)
+
+  delegated_puzzle_hash
+)"
+    }
+    .to_string();
+    let res = run_string(&prog, &"(1 2 3 . 4)".to_string()).unwrap();
+    assert_eq!(res.to_string(), "4");
+}
+
+#[test]
+fn test_defconstant_tree() {
+    let prog = indoc! {"
+(mod ()
+  (include *standard-cl-21*)
+  (include test-defconstant-tree.clib)
+  constant-tree
+  )"}
+    .to_string();
+    let res = run_string(&prog, &"()".to_string()).unwrap();
+    assert_eq!(res.to_string(), "((0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a . 0x9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2) 0x02a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222 . 0x02a8d5dd63fba471ebcb1f3e8f7c1e1879b7152a6e7298a91ce119a63400ade7c5)");
+}
+
+#[test]
+fn test_inline_out_of_bounds_diagnostic() {
+    let prog = indoc! {"
+(mod ()
+  (include *standard-cl-21*)
+  (defun-inline FOO (X Y) (+ X Y))
+  (FOO 3)
+  )"}
+    .to_string();
+    let res = run_string(&prog, &"()".to_string());
+    if let Err(CompileErr(l, e)) = res {
+        assert_eq!(l.line, 4);
+        assert!(e.starts_with("Lookup"));
+    } else {
+        assert!(false);
+    }
 }

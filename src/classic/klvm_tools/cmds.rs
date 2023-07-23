@@ -16,26 +16,26 @@ use core::cmp::max;
 use linked_hash_map::LinkedHashMap;
 use yaml_rust::{Yaml, YamlEmitter};
 
-use klvm_rs::allocator::{Allocator, NodePtr};
-use klvm_rs::reduction::EvalErr;
-use klvm_rs::run_program::PreEval;
+use clvm_rs::allocator::{Allocator, NodePtr};
+use clvm_rs::reduction::EvalErr;
+use clvm_rs::run_program::PreEval;
 
-use crate::classic::klvm::__type_compatibility__::{t, Bytes, BytesFromType, Stream, Tuple};
-use crate::classic::klvm::keyword_from_atom;
-use crate::classic::klvm::serialize::{sexp_from_stream, sexp_to_stream, SimpleCreateKLVMObject};
-use crate::classic::klvm::sexp::{enlist, proper_list, sexp_as_bin};
-use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble, disassemble_with_kw};
-use crate::classic::klvm_tools::debug::{
+use crate::classic::clvm::__type_compatibility__::{t, Bytes, BytesFromType, Stream, Tuple};
+use crate::classic::clvm::keyword_from_atom;
+use crate::classic::clvm::serialize::{sexp_from_stream, sexp_to_stream, SimpleCreateCLVMObject};
+use crate::classic::clvm::sexp::{enlist, proper_list, sexp_as_bin};
+use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble, disassemble_with_kw};
+use crate::classic::clvm_tools::clvmc::detect_modern;
+use crate::classic::clvm_tools::debug::{
     check_unused, trace_pre_eval, trace_to_table, trace_to_text,
 };
-use crate::classic::klvm_tools::ir::reader::read_ir;
-use crate::classic::klvm_tools::klvmc::detect_modern;
-use crate::classic::klvm_tools::sha256tree::sha256tree;
-use crate::classic::klvm_tools::stages;
-use crate::classic::klvm_tools::stages::stage_0::{
+use crate::classic::clvm_tools::ir::reader::read_ir;
+use crate::classic::clvm_tools::sha256tree::sha256tree;
+use crate::classic::clvm_tools::stages;
+use crate::classic::clvm_tools::stages::stage_0::{
     DefaultProgramRunner, RunProgramOption, TRunProgram,
 };
-use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
 use crate::classic::platform::PathJoin;
 
 use crate::classic::platform::argparse::{
@@ -44,10 +44,10 @@ use crate::classic::platform::argparse::{
 };
 
 use crate::compiler::cldb::{hex_to_modern_sexp, CldbNoOverride, CldbRun, CldbRunEnv};
+use crate::compiler::clvm::start_step;
 use crate::compiler::compiler::{compile_file, run_optimizer, DefaultCompilerOpts};
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
 use crate::compiler::debug::build_symbol_table_mut;
-use crate::compiler::klvm::start_step;
 use crate::compiler::prims;
 use crate::compiler::sexp;
 use crate::compiler::sexp::parse_sexp;
@@ -102,7 +102,7 @@ pub fn call_tool(
         Argument::new()
             .set_n_args(NArgsSpec::KleeneStar)
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("path to klvm script, or literal script".to_string()),
+            .set_help("path to clvm script, or literal script".to_string()),
     );
 
     let rest_args: Vec<String> = input_args.iter().skip(1).cloned().collect();
@@ -181,7 +181,7 @@ impl TConversion for OpdConversion {
             hex_text.to_string(),
         )))));
 
-        sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateKLVMObject {}))
+        sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateCLVMObject {}))
             .map_err(|e| e.1)
             .map(|sexp| {
                 let disassembled = disassemble(allocator, sexp.1);
@@ -195,7 +195,7 @@ pub fn opc(args: &[String]) {
     call_tool(
         &mut allocator,
         "opc",
-        "Compile a klvm script.",
+        "Compile a clvm script.",
         Box::new(OpcConversion {}),
         args,
     );
@@ -206,7 +206,7 @@ pub fn opd(args: &[String]) {
     call_tool(
         &mut allocator,
         "opd",
-        "Disassemble a compiled klvm script from hex.",
+        "Disassemble a compiled clvm script from hex.",
         Box::new(OpdConversion {}),
         args,
     );
@@ -260,8 +260,8 @@ fn to_yaml(entries: &[BTreeMap<String, String>]) -> Yaml {
 pub fn cldb(args: &[String]) {
     let tool_name = "cldb".to_string();
     let props = TArgumentParserProps {
-        description: "Execute a klvm script.".to_string(),
-        prog: format!("klvm_tools {}", tool_name),
+        description: "Execute a clvm script.".to_string(),
+        prog: format!("clvm_tools {}", tool_name),
     };
 
     let mut search_paths = Vec::new();
@@ -296,14 +296,14 @@ pub fn cldb(args: &[String]) {
         vec!["path_or_code".to_string()],
         Argument::new()
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("filepath to klvm script, or a literal script".to_string()),
+            .set_help("filepath to clvm script, or a literal script".to_string()),
     );
     parser.add_argument(
         vec!["env".to_string()],
         Argument::new()
             .set_n_args(NArgsSpec::Optional)
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("klvm script environment, as klvm src, or hex".to_string()),
+            .set_help("clvm script environment, as clvm src, or hex".to_string()),
     );
     let arg_vec = args[1..].to_vec();
 
@@ -434,7 +434,7 @@ pub fn cldb(args: &[String]) {
                 }
             }
         }
-        _ => match parse_sexp(Srcloc::start("*arg*"), &parsed_args_result) {
+        _ => match parse_sexp(Srcloc::start("*arg*"), parsed_args_result.bytes()) {
             Ok(r) => {
                 if !r.is_empty() {
                     args = r[0].clone();
@@ -557,8 +557,8 @@ fn write_sym_output(compiled_lookup: &HashMap<String, String>, path: &str) -> Re
 
 pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, default_stage: u32) {
     let props = TArgumentParserProps {
-        description: "Execute a klvm script.".to_string(),
-        prog: format!("klvm_tools {}", tool_name),
+        description: "Execute a clvm script.".to_string(),
+        prog: format!("clvm_tools {}", tool_name),
     };
 
     let mut parser = ArgumentParser::new(Some(props));
@@ -641,14 +641,14 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
         vec!["path_or_code".to_string()],
         Argument::new()
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("filepath to klvm script, or a literal script".to_string()),
+            .set_help("filepath to clvm script, or a literal script".to_string()),
     );
     parser.add_argument(
         vec!["env".to_string()],
         Argument::new()
             .set_n_args(NArgsSpec::Optional)
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("klvm script environment, as klvm src, or hex".to_string()),
+            .set_help("clvm script environment, as clvm src, or hex".to_string()),
     );
     parser.add_argument(
         vec!["-m".to_string(), "--max-cost".to_string()],
@@ -668,6 +668,18 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
         Argument::new()
             .set_action(TArgOptionAction::StoreTrue)
             .set_help("Only show frames along the exception path".to_string()),
+    );
+    parser.add_argument(
+        vec!["-g".to_string(), "--extra-syms".to_string()],
+        Argument::new()
+            .set_action(TArgOptionAction::StoreTrue)
+            .set_help("Produce more diagnostic info in symbols".to_string()),
+    );
+    parser.add_argument(
+        vec!["--symbol-output-file".to_string()],
+        Argument::new()
+            .set_type(Rc::new(PathJoin {}))
+            .set_default(ArgumentValue::ArgString(None, "main.sym".to_string())),
     );
 
     if tool_name == "run" {
@@ -697,6 +709,27 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
         _ => keyword_from_atom(),
     };
 
+    // If extra symbol output is desired (not all keys are hashes, but there's
+    // more info).
+    let extra_symbol_info = parsed_args.get("extra_syms").map(|_| true).unwrap_or(false);
+
+    // Get name of included file so we can use it to initialize the compiler's
+    // runner, which contains operators used at compile time in clvm to update
+    // symbols.  This is the only means we have of communicating with the
+    // compilation process from this level.
+    let mut input_file = None;
+    let mut input_program = "()".to_string();
+
+    if let Some(ArgumentValue::ArgString(file, path_or_code)) = parsed_args.get("path_or_code") {
+        input_file = file.clone();
+        input_program = path_or_code.to_string();
+    }
+
+    let reported_input_file = input_file
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| "*command*".to_string());
+
     let dpr;
     let run_program: Rc<dyn TRunProgram>;
     let mut search_paths = Vec::new();
@@ -708,13 +741,15 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
                     bare_paths.push(s.to_string());
                 }
             }
-            let special_runner = run_program_for_search_paths(&bare_paths);
+            let special_runner =
+                run_program_for_search_paths(&reported_input_file, &bare_paths, extra_symbol_info);
             search_paths = bare_paths;
             dpr = special_runner.clone();
             run_program = special_runner;
         }
         _ => {
-            let ordinary_runner = run_program_for_search_paths(&Vec::new());
+            let ordinary_runner =
+                run_program_for_search_paths(&reported_input_file, &Vec::new(), extra_symbol_info);
             dpr = ordinary_runner.clone();
             run_program = ordinary_runner;
         }
@@ -722,7 +757,6 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
 
     let mut allocator = Allocator::new();
 
-    let mut input_file = None;
     let input_serialized = None;
     let mut input_sexp: Option<NodePtr> = None;
 
@@ -730,13 +764,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
     let mut time_read_hex = SystemTime::now();
     let mut time_assemble = SystemTime::now();
 
-    let mut input_program = "()".to_string();
     let mut input_args = "()".to_string();
-
-    if let Some(ArgumentValue::ArgString(file, path_or_code)) = parsed_args.get("path_or_code") {
-        input_file = file.clone();
-        input_program = path_or_code.to_string();
-    }
 
     if let Some(ArgumentValue::ArgString(file, path_or_code)) = parsed_args.get("env") {
         input_file = file.clone();
@@ -760,7 +788,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
             let input_prog_sexp = sexp_from_stream(
                 &mut allocator,
                 &mut prog_stream,
-                Box::new(SimpleCreateKLVMObject {}),
+                Box::new(SimpleCreateCLVMObject {}),
             )
             .map(|x| Some(x.1))
             .unwrap();
@@ -769,7 +797,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
             let input_arg_sexp = sexp_from_stream(
                 &mut allocator,
                 &mut arg_stream,
-                Box::new(SimpleCreateKLVMObject {}),
+                Box::new(SimpleCreateCLVMObject {}),
             )
             .map(|x| Some(x.1))
             .unwrap();
@@ -852,11 +880,8 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
     };
 
     if do_check_unused {
-        let use_filename = input_file
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(|| "*command*".to_string());
-        let opts = Rc::new(DefaultCompilerOpts::new(&use_filename)).set_search_paths(&search_paths);
+        let opts =
+            Rc::new(DefaultCompilerOpts::new(&reported_input_file)).set_search_paths(&search_paths);
         match check_unused(opts, &input_program) {
             Ok((success, output)) => {
                 stderr_output(output);
@@ -870,6 +895,17 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
             }
         }
     }
+
+    let symbol_table_output = parsed_args
+        .get("symbol_output_file")
+        .and_then(|s| {
+            if let ArgumentValue::ArgString(_, v) = s {
+                Some(v.clone())
+            } else {
+                None
+            }
+        })
+        .unwrap_or_else(|| "main.sym".to_string());
 
     // In testing: short circuit for modern compilation.
     if let Some(dialect) = dialect {
@@ -903,7 +939,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
                 stdout.write_str(&r.to_string());
 
                 build_symbol_table_mut(&mut symbol_table, &r);
-                write_sym_output(&symbol_table, "main.sym").expect("writing symbols");
+                write_sym_output(&symbol_table, &symbol_table_output).expect("writing symbols");
             }
             Err(c) => {
                 stdout.write_str(&format!("{}: {}", c.0, c.1));
@@ -925,7 +961,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
             log_entries: RefCell::new(Vec::new()),
         }));
 
-    // klvm_rs uses boxed callbacks with unspecified lifetimes so in order to
+    // clvm_rs uses boxed callbacks with unspecified lifetimes so in order to
     // support logging as intended, we must have values that can be moved so
     // the callbacks can become immortal.  Our strategy is to use channels
     // and threads for this.
@@ -993,7 +1029,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
     let max_cost = parsed_args
         .get("max_cost")
         .map(|x| match x {
-            ArgumentValue::ArgInt(i) => *i as i64 - cost_offset,
+            ArgumentValue::ArgInt(i) => *i - cost_offset,
             _ => 0,
         })
         .unwrap_or_else(|| 0);
@@ -1003,7 +1039,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
         input_sexp = sexp_from_stream(
             &mut allocator,
             &mut Stream::new(input_serialized),
-            Box::new(SimpleCreateKLVMObject {}),
+            Box::new(SimpleCreateCLVMObject {}),
         )
         .map(|x| Some(x.1))
         .unwrap();
@@ -1127,7 +1163,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
 
     let compile_sym_out = dpr.get_compiles();
     if !compile_sym_out.is_empty() {
-        write_sym_output(&compile_sym_out, "main.sym").ok();
+        write_sym_output(&compile_sym_out, &symbol_table_output).ok();
     }
 
     stdout.write_str(&format!("{}\n", output));
@@ -1169,7 +1205,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
 }
 
 /*
-Copyright 2018 Chik Network Inc
+Copyright 2018 Chia Network Inc
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at

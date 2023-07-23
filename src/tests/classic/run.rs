@@ -11,16 +11,17 @@ use rand_chacha::ChaChaRng;
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use klvmr::allocator::Allocator;
+use clvmr::allocator::Allocator;
 
-use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero, Stream};
-use crate::classic::klvm_tools::binutils::disassemble;
-use crate::classic::klvm_tools::cmds::launch_tool;
-use crate::classic::klvm_tools::node_path::NodePath;
-use crate::compiler::klvm::convert_to_klvm_rs;
+use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero, Stream};
+use crate::classic::clvm_tools::binutils::disassemble;
+use crate::classic::clvm_tools::cmds::launch_tool;
+use crate::classic::clvm_tools::node_path::NodePath;
+use crate::compiler::clvm::convert_to_clvm_rs;
 use crate::compiler::sexp;
 use crate::util::{number_from_u8, Number};
 
@@ -300,12 +301,27 @@ fn test_divmod() {
 }
 
 #[cfg(test)]
-pub struct RandomKlvmNumber {
+pub struct RandomClvmNumber {
     pub intended_value: Number,
 }
 
+#[test]
+fn test_classic_mod_form() {
+    let res = do_basic_run(&vec![
+        "run".to_string(),
+        indoc! {"
+(mod () (a (mod (X) (+ 1 (* X 2))) (list 3)))
+"}
+        .to_string(),
+        "()".to_string(),
+    ])
+    .trim()
+    .to_string();
+    assert_eq!(res, "(q . 7)");
+}
+
 #[cfg(test)]
-pub fn random_klvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomKlvmNumber {
+pub fn random_clvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomClvmNumber {
     // Make a number by creating some random atom bytes.
     // Set high bit randomly.
     let natoms = rng.gen_range(0..=NUM_GEN_ATOMS);
@@ -326,15 +342,15 @@ pub fn random_klvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomKlvmNumber {
     }
     let num = number_from_u8(&result_bytes);
 
-    RandomKlvmNumber {
+    RandomClvmNumber {
         intended_value: num,
     }
 }
 
 #[cfg(test)]
-impl Distribution<RandomKlvmNumber> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandomKlvmNumber {
-        random_klvm_number(rng)
+impl Distribution<RandomClvmNumber> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandomClvmNumber {
+        random_clvm_number(rng)
     }
 }
 
@@ -343,7 +359,7 @@ impl Distribution<RandomKlvmNumber> for Standard {
 fn test_encoding_properties() {
     let mut rng = ChaChaRng::from_entropy();
     for _ in 1..=200 {
-        let number_spec: RandomKlvmNumber = rng.gen();
+        let number_spec: RandomClvmNumber = rng.gen();
 
         // We'll have it compile a constant value.
         // The representation of the number will come out most likely
@@ -472,7 +488,7 @@ fn test_check_tricky_arg_path_random() {
         .trim()
         .to_string();
         let mut allocator = Allocator::new();
-        let converted = convert_to_klvm_rs(
+        let converted = convert_to_clvm_rs(
             &mut allocator,
             Rc::new(sexp::SExp::Atom(random_tree.loc(), k.clone())),
         )
@@ -481,4 +497,60 @@ fn test_check_tricky_arg_path_random() {
         eprintln!("run {} want {} have {}", program, disassembled, res);
         assert_eq!(disassembled, res);
     }
+}
+
+#[test]
+fn test_classic_sets_source_file_in_symbols() {
+    let tname = "test_classic_sets_source_file_in_symbols.sym".to_string();
+    do_basic_run(&vec![
+        "run".to_string(),
+        "--extra-syms".to_string(),
+        "--symbol-output-file".to_string(),
+        tname.clone(),
+        "resources/tests/assert.clvm".to_string(),
+    ]);
+    let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
+    let decoded_symbol_file: HashMap<String, String> =
+        serde_json::from_str(&read_in_file).expect("should decode");
+    assert_eq!(
+        decoded_symbol_file.get("source_file").cloned(),
+        Some("resources/tests/assert.clvm".to_string())
+    );
+    fs::remove_file(tname).expect("should have dropped symbols");
+}
+
+#[test]
+fn test_classic_sets_source_file_in_symbols_only_when_asked() {
+    let tname = "test_classic_sets_source_file_in_symbols.sym".to_string();
+    do_basic_run(&vec![
+        "run".to_string(),
+        "--symbol-output-file".to_string(),
+        tname.clone(),
+        "resources/tests/assert.clvm".to_string(),
+    ]);
+    let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
+    fs::remove_file(&tname).expect("should have existed");
+    let decoded_symbol_file: HashMap<String, String> =
+        serde_json::from_str(&read_in_file).expect("should decode");
+    assert_eq!(decoded_symbol_file.get("source_file"), None);
+}
+
+#[test]
+fn test_modern_sets_source_file_in_symbols() {
+    let tname = "test_modern_sets_source_file_in_symbols.sym".to_string();
+    do_basic_run(&vec![
+        "run".to_string(),
+        "--extra-syms".to_string(),
+        "--symbol-output-file".to_string(),
+        tname.clone(),
+        "resources/tests/steprun/fact.cl".to_string(),
+    ]);
+    let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
+    let decoded_symbol_file: HashMap<String, String> =
+        serde_json::from_str(&read_in_file).expect("should decode");
+    fs::remove_file(&tname).expect("should have existed");
+    assert_eq!(
+        decoded_symbol_file.get("source_file").cloned(),
+        Some("resources/tests/steprun/fact.cl".to_string())
+    );
 }

@@ -6,26 +6,26 @@ use std::rc::Rc;
 
 use tempfile::NamedTempFile;
 
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use clvm_rs::reduction::EvalErr;
 
-use crate::classic::klvm::__type_compatibility__::Stream;
-use crate::classic::klvm::serialize::sexp_to_stream;
-use crate::classic::klvm::sexp::proper_list;
-use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble};
-use crate::classic::klvm_tools::ir::reader::read_ir;
-use crate::classic::klvm_tools::stages::run;
-use crate::classic::klvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
-use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::clvm::__type_compatibility__::Stream;
+use crate::classic::clvm::serialize::sexp_to_stream;
+use crate::classic::clvm::sexp::proper_list;
+use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble};
+use crate::classic::clvm_tools::ir::reader::read_ir;
+use crate::classic::clvm_tools::stages::run;
+use crate::classic::clvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
+use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
 
 use crate::classic::platform::distutils::dep_util::newer;
 
+use crate::compiler::clvm::convert_to_clvm_rs;
 use crate::compiler::compiler::compile_file;
 use crate::compiler::compiler::run_optimizer;
 use crate::compiler::compiler::DefaultCompilerOpts;
 use crate::compiler::comptypes::CompileErr;
 use crate::compiler::comptypes::CompilerOpts;
-use crate::compiler::klvm::convert_to_klvm_rs;
 use crate::compiler::runtypes::RunFailure;
 
 fn include_dialect(
@@ -76,7 +76,7 @@ pub fn detect_modern(allocator: &mut Allocator, sexp: NodePtr) -> Option<i32> {
     })
 }
 
-fn compile_klvm_text(
+fn compile_clvm_text(
     allocator: &mut Allocator,
     search_paths: &[String],
     symbol_table: &mut HashMap<String, String>,
@@ -97,7 +97,7 @@ fn compile_klvm_text(
         let res = unopt_res.and_then(|x| run_optimizer(allocator, runner, Rc::new(x)));
 
         res.and_then(|x| {
-            convert_to_klvm_rs(allocator, x).map_err(|r| match r {
+            convert_to_clvm_rs(allocator, x).map_err(|r| match r {
                 RunFailure::RunErr(l, x) => CompileErr(l, x),
                 RunFailure::RunExn(l, x) => CompileErr(l, x.to_string()),
             })
@@ -106,14 +106,14 @@ fn compile_klvm_text(
     } else {
         let compile_invoke_code = run(allocator);
         let input_sexp = allocator.new_pair(assembled_sexp, allocator.null())?;
-        let run_program = run_program_for_search_paths(search_paths);
+        let run_program = run_program_for_search_paths(input_path, search_paths, false);
         let run_program_output =
             run_program.run_program(allocator, compile_invoke_code, input_sexp, None)?;
         Ok(run_program_output.1)
     }
 }
 
-pub fn compile_klvm_inner(
+pub fn compile_clvm_inner(
     allocator: &mut Allocator,
     search_paths: &[String],
     symbol_table: &mut HashMap<String, String>,
@@ -121,13 +121,13 @@ pub fn compile_klvm_inner(
     text: &str,
     result_stream: &mut Stream,
 ) -> Result<(), String> {
-    let result = compile_klvm_text(allocator, search_paths, symbol_table, text, filename)
+    let result = compile_clvm_text(allocator, search_paths, symbol_table, text, filename)
         .map_err(|x| format!("error {} compiling {}", x.1, disassemble(allocator, x.0)))?;
     sexp_to_stream(allocator, result, result_stream);
     Ok(())
 }
 
-pub fn compile_klvm(
+pub fn compile_clvm(
     input_path: &str,
     output_path: &str,
     search_paths: &[String],
@@ -142,7 +142,7 @@ pub fn compile_klvm(
         let text = fs::read_to_string(input_path)
             .map_err(|x| format!("error reading {}: {:?}", input_path, x))?;
 
-        compile_klvm_inner(
+        compile_clvm_inner(
             &mut allocator,
             search_paths,
             symbol_table,
@@ -198,10 +198,10 @@ pub fn compile_klvm(
 //   const r: string[] = [];
 //   for(const {dirpath, filenames} of os_walk(path)){
 //     for(const filename of filenames){
-//       if(filename.endsWith(".klvm")){
+//       if(filename.endsWith(".clvm")){
 //         const full_path = path_join(dirpath, filename);
 //         const target = `${full_path}.hex}`;
-//         compile_klvm(full_path, target);
+//         compile_clvm(full_path, target);
 //         r.push(target);
 //       }
 //     }

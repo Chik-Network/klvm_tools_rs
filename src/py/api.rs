@@ -1,6 +1,6 @@
 #![allow(clippy::all)]
 // #[allow(clippy::borrow_deref_ref)]
-// Eventually this can be downgraded and applied just to compile_klvm
+// Eventually this can be downgraded and applied just to compile_clvm
 // re: https://github.com/rust-lang/rust-clippy/issues/8971
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
@@ -12,22 +12,25 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
-use klvm_rs::allocator::Allocator;
+use clvm_rs::allocator::Allocator;
 
-use crate::classic::klvm::__type_compatibility__::Stream;
-use crate::classic::klvm_tools::cmds;
-use crate::classic::klvm_tools::klvmc;
-use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::clvm::serialize::sexp_to_stream;
+use crate::classic::clvm_tools::clvmc;
+use crate::classic::clvm_tools::cmds;
+use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
 use crate::compiler::cldb::{
     hex_to_modern_sexp, CldbOverrideBespokeCode, CldbRun, CldbRunEnv, CldbSingleBespokeOverride,
 };
-use crate::compiler::klvm::start_step;
+use crate::compiler::clvm::{convert_to_clvm_rs, start_step};
+use crate::compiler::compiler::{extract_program_and_env, path_to_function, rewrite_in_program};
+use crate::compiler::comptypes::CompileErr;
 use crate::compiler::prims;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
 
-use crate::py::pyval::{klvm_value_to_python, python_value_to_klvm};
+use crate::py::pyval::{clvm_value_to_python, python_value_to_clvm};
 
 create_exception!(mymodule, CldbError, PyException);
 
@@ -38,7 +41,7 @@ fn get_version() -> PyResult<String> {
 }
 
 #[pyfunction(arg3 = "[]", arg4 = "None")]
-fn compile_klvm(
+fn compile_clvm(
     input_path: &PyAny,
     output_path: String,
     search_paths: Vec<String>,
@@ -60,12 +63,12 @@ fn compile_klvm(
 
     let mut path_string = real_input_path.to_string();
 
-    if !std::path::Path::new(&path_string).exists() && !path_string.ends_with(".klvm") {
-        path_string += ".klvm";
+    if !std::path::Path::new(&path_string).exists() && !path_string.ends_with(".clvm") {
+        path_string += ".clvm";
     };
 
     let mut symbols = HashMap::new();
-    let compiled = klvmc::compile_klvm(&path_string, &output_path, &search_paths, &mut symbols)
+    let compiled = clvmc::compile_clvm(&path_string, &output_path, &search_paths, &mut symbols)
         .map_err(PyException::new_err)?;
 
     Python::with_gil(|py| {
@@ -152,18 +155,18 @@ impl CldbSinglePythonOverride {
 impl CldbSingleBespokeOverride for CldbSinglePythonOverride {
     fn get_override(&self, env: Rc<SExp>) -> Result<Rc<SExp>, RunFailure> {
         Python::with_gil(|py| {
-            let arg_value = klvm_value_to_python(py, env.clone());
+            let arg_value = clvm_value_to_python(py, env.clone());
             let res = self
                 .pycode
                 .call1(py, PyTuple::new(py, &vec![arg_value]))
                 .map_err(|e| RunFailure::RunErr(env.loc(), format!("{}", e)))?;
-            python_value_to_klvm(py, res)
+            python_value_to_clvm(py, res)
         })
     }
 }
 
 #[pyfunction(arg4 = "None")]
-fn start_klvm_program(
+fn start_clvm_program(
     hex_prog: String,
     hex_args: String,
     symbol_table: Option<HashMap<String, String>>,
@@ -253,13 +256,88 @@ fn launch_tool(tool_name: String, args: Vec<String>, default_stage: u32) -> Vec<
     return stdout.get_value().data().clone();
 }
 
+fn compile_err_to_cldb_err(err: &CompileErr) -> PyErr {
+    CldbError::new_err(format!("{}: {}", err.0, err.1))
+}
+
+fn run_err_to_cldb_err(err: RunFailure) -> PyErr {
+    match err {
+        RunFailure::RunExn(l, v) => CldbError::new_err(format!("{}: {}", l, v)),
+        RunFailure::RunErr(l, e) => CldbError::new_err(format!("{}: {}", l, e)),
+    }
+}
+
+fn find_function_hash(symbol_table: &HashMap<String, String>, f: &String) -> Option<String> {
+    for (k, v) in symbol_table.iter() {
+        if v == f {
+            return Some(k.clone());
+        }
+    }
+    None
+}
+
+// Given a program hex and symbols, compose the program that executes a given
+// function with some given arguments as though the program's primary expression
+// had been that.
+// returns a string or {"error"...}
+#[pyfunction]
+pub fn compose_run_function(
+    hex_prog: String,
+    symbol_table: HashMap<String, String>,
+    function_name: String,
+) -> PyResult<String> {
+    let mut allocator = Allocator::new();
+    let loc = Srcloc::start(&"*py*".to_string());
+    let function_hash = match find_function_hash(&symbol_table, &function_name) {
+        Some(f) => f,
+        _ => {
+            return Err(compile_err_to_cldb_err(&CompileErr(
+                loc.clone(),
+                format!("function not found in symbols: {}", function_name),
+            )));
+        }
+    };
+    let program = hex_to_modern_sexp(&mut allocator, &symbol_table, loc.clone(), &hex_prog)
+        .map_err(run_err_to_cldb_err)?;
+    let main_env = match extract_program_and_env(program.clone()) {
+        Some(em) => em,
+        _ => {
+            return Err(compile_err_to_cldb_err(&CompileErr(
+                program.loc(),
+                "could not extract env from program".to_string(),
+            )));
+        }
+    };
+    let hash_bytes = Bytes::new(Some(BytesFromType::Hex(function_hash.clone())));
+    let function_path = match path_to_function(main_env.1.clone(), &hash_bytes.data().clone()) {
+        Some(p) => p,
+        _ => {
+            return Err(compile_err_to_cldb_err(&CompileErr(
+                program.loc(),
+                format!(
+                    "could not find function with hash from symbols: {}",
+                    function_name
+                ),
+            )));
+        }
+    };
+
+    let new_program = rewrite_in_program(function_path, main_env.1);
+    let mut result_stream = Stream::new(None);
+    let clvm_rs_value =
+        convert_to_clvm_rs(&mut allocator, new_program).map_err(run_err_to_cldb_err)?;
+    sexp_to_stream(&mut allocator, clvm_rs_value, &mut result_stream);
+    Ok(result_stream.get_value().hex())
+}
+
 #[pymodule]
-fn klvm_tools_rs(py: Python, m: &PyModule) -> PyResult<()> {
+fn clvm_tools_rs(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("CldbError", py.get_type::<CldbError>())?;
-    m.add_function(wrap_pyfunction!(compile_klvm, m)?)?;
+    m.add_function(wrap_pyfunction!(compile_clvm, m)?)?;
     m.add_function(wrap_pyfunction!(get_version, m)?)?;
-    m.add_function(wrap_pyfunction!(start_klvm_program, m)?)?;
+    m.add_function(wrap_pyfunction!(start_clvm_program, m)?)?;
     m.add_function(wrap_pyfunction!(launch_tool, m)?)?;
+    m.add_function(wrap_pyfunction!(compose_run_function, m)?)?;
     m.add_class::<PythonRunStep>()?;
     Ok(())
 }

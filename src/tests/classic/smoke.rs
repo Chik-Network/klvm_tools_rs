@@ -4,18 +4,18 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use clvm_rs::reduction::EvalErr;
 
-use crate::classic::klvm::__type_compatibility__::{t, Stream};
-use crate::classic::klvm_tools::cmds::{launch_tool, OpcConversion, OpdConversion, TConversion};
+use crate::classic::clvm::__type_compatibility__::{t, Stream};
+use crate::classic::clvm_tools::cmds::{launch_tool, OpcConversion, OpdConversion, TConversion};
 
-use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble};
-use crate::classic::klvm_tools::ir::reader::read_ir;
-use crate::classic::klvm_tools::node_path::NodePath;
-use crate::classic::klvm_tools::stages;
-use crate::classic::klvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
-use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble};
+use crate::classic::clvm_tools::ir::reader::read_ir;
+use crate::classic::clvm_tools::node_path::NodePath;
+use crate::classic::clvm_tools::stages;
+use crate::classic::clvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
+use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
 
 #[test]
 fn nft_opc() {
@@ -128,7 +128,7 @@ fn compile_program<'a>(
     src: String,
 ) -> Result<String, EvalErr> {
     let run_script = stages::run(allocator);
-    let runner = run_program_for_search_paths(&vec![include_path]);
+    let runner = run_program_for_search_paths("*test*", &vec![include_path], false);
     let input_ir = read_ir(&src);
     let input_program = assemble_from_ir(allocator, Rc::new(input_ir.unwrap())).unwrap();
     let input_sexp = allocator.new_pair(input_program, allocator.null()).unwrap();
@@ -463,7 +463,7 @@ fn pool_member_innerpuz() {
           ; pool_reward_height is the block height that the reward was generated at. This is used to calculate the coin ID.
           ; key_value_list is signed extra data that the wallet may want to publicly announce for syncing purposes
         
-          (include condition_codes.klvm)
+          (include condition_codes.clvm)
           (include singleton_truths.clib)
         
           ; takes a lisp tree and returns the hash of it

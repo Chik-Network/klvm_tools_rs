@@ -1,6 +1,6 @@
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
-use crate::classic::klvm::sexp::equal_to;
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::clvm::sexp::equal_to;
+use clvm_rs::allocator::{Allocator, NodePtr, SExp};
 use std::collections::HashMap;
 
 pub const ATOM_MATCH: [u8; 1] = [b'$'];

@@ -1,7 +1,7 @@
-use klvm_rs::allocator::Allocator;
-use klvm_rs::reduction::Response;
+use clvm_rs::allocator::Allocator;
+use clvm_rs::reduction::Response;
 
-use crate::classic::klvm::sexp::CastableType;
+use crate::classic::clvm::sexp::CastableType;
 
 pub type TValStack = Vec<CastableType>;
 // export type TValStack = Array<Bytes|SExp|SExp[]|Tuple<SExp, SExp>>;

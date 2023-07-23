@@ -4,14 +4,14 @@ use std::rc::Rc;
 use encoding8::ascii::is_printable;
 use unicode_segmentation::UnicodeSegmentation;
 
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use clvm_rs::reduction::EvalErr;
 
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Record, Stream};
-use crate::classic::klvm::{keyword_from_atom, keyword_to_atom};
-use crate::classic::klvm_tools::ir::r#type::IRRepr;
-use crate::classic::klvm_tools::ir::reader::IRReader;
-use crate::classic::klvm_tools::ir::writer::write_ir;
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Record, Stream};
+use crate::classic::clvm::{keyword_from_atom, keyword_to_atom};
+use crate::classic::clvm_tools::ir::r#type::IRRepr;
+use crate::classic::clvm_tools::ir::reader::IRReader;
+use crate::classic::clvm_tools::ir::writer::write_ir;
 
 pub fn is_printable_string(s: &str) -> bool {
     for ch in s.graphemes(true) {
@@ -102,18 +102,21 @@ pub fn ir_for_atom(atom: &Bytes, allow_keyword: bool) -> IRRepr {
 pub fn disassemble_to_ir_with_kw(
     allocator: &mut Allocator,
     sexp: NodePtr,
-    keyword_from_atom: &Record<Vec<u8>, String>,
-    allow_keyword_: bool,
+    // Due to an oversight in the original port, the user's
+    // kw_from_atom settings weren't honored, however they're
+    // never non-default in this code.  This deserves looking
+    // at, but isn't pressing at the moment.
+    _keyword_from_atom: &Record<Vec<u8>, String>,
+    mut allow_keyword: bool,
 ) -> IRRepr {
-    let mut allow_keyword = allow_keyword_;
     match allocator.sexp(sexp) {
         SExp::Pair(l, r) => {
             if let SExp::Pair(_, _) = allocator.sexp(l) {
                 allow_keyword = true;
             }
 
-            let v0 = disassemble_to_ir_with_kw(allocator, l, keyword_from_atom, allow_keyword);
-            let v1 = disassemble_to_ir_with_kw(allocator, r, keyword_from_atom, false);
+            let v0 = disassemble_to_ir_with_kw(allocator, l, _keyword_from_atom, allow_keyword);
+            let v1 = disassemble_to_ir_with_kw(allocator, r, _keyword_from_atom, false);
             IRRepr::Cons(Rc::new(v0), Rc::new(v1))
         }
 

@@ -16,12 +16,12 @@ leading bits is the count of bytes to read of size
 use std::rc::Rc;
 use std::vec::Vec;
 
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::klvm::as_rust::{TToSexpF, TValStack};
-use crate::classic::klvm::casts::int_from_bytes;
-use crate::classic::klvm::sexp::{to_sexp_type, CastableType};
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
-use klvm_rs::reduction::{EvalErr, Reduction, Response};
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::clvm::as_rust::{TToSexpF, TValStack};
+use crate::classic::clvm::casts::int_from_bytes;
+use crate::classic::clvm::sexp::{to_sexp_type, CastableType};
+use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use clvm_rs::reduction::{EvalErr, Reduction, Response};
 
 const MAX_SINGLE_BYTE: u32 = 0x7F;
 const CONS_BOX_MARKER: u32 = 0xFF;
@@ -160,7 +160,7 @@ impl OpStackEntry for OpCons {
             Some((l, r)) => {
                 match to_sexp_f.invoke(allocator, CastableType::TupleOf(Rc::new(l), Rc::new(r))) {
                     Ok(c) => {
-                        val_stack.push(CastableType::KLVMObject(c.1));
+                        val_stack.push(CastableType::CLVMObject(c.1));
                         None
                     }
                     Err(e) => Some(e),
@@ -196,7 +196,7 @@ impl OpStackEntry for OpReadSexp {
 
         match atom_from_stream(allocator, f, b, to_sexp_f) {
             Ok(v) => {
-                val_stack.push(CastableType::KLVMObject(v));
+                val_stack.push(CastableType::CLVMObject(v));
                 None
             }
             Err(e) => Some(e),
@@ -204,9 +204,9 @@ impl OpStackEntry for OpReadSexp {
     }
 }
 
-pub struct SimpleCreateKLVMObject {}
+pub struct SimpleCreateCLVMObject {}
 
-impl<'a> TToSexpF<'a> for SimpleCreateKLVMObject {
+impl<'a> TToSexpF<'a> for SimpleCreateCLVMObject {
     fn invoke(&self, allocator: &'a mut Allocator, v: CastableType) -> Response {
         to_sexp_type(allocator, v).map(|sexp| Reduction(1, sexp))
     }
@@ -226,7 +226,7 @@ pub fn sexp_from_stream<'a>(
             &mut op_stack,
             &mut val_stack,
             f,
-            Box::new(SimpleCreateKLVMObject {}),
+            Box::new(SimpleCreateCLVMObject {}),
         );
     }
 

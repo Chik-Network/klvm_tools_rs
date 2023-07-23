@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use klvm_rs::allocator::Allocator;
+use clvm_rs::allocator::Allocator;
 
-use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
 use crate::compiler::compiler::DefaultCompilerOpts;
 use crate::compiler::comptypes::CompileErr;
 use crate::compiler::repl::Repl;
@@ -174,5 +174,15 @@ fn test_collatz() {
         .unwrap()
         .unwrap(),
         "(q . 7)"
+    );
+}
+
+#[test]
+fn test_mod_in_repl() {
+    assert_eq!(
+        test_repl_outcome(vec!["(a (mod (X) (+ 1 (* 3 X))) (list 3))"])
+            .unwrap()
+            .unwrap(),
+        "(q . 10)"
     );
 }

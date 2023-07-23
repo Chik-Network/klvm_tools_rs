@@ -1,4 +1,5 @@
 pub mod cldb;
+pub mod clvm;
 mod codegen;
 #[allow(clippy::module_inception)]
 pub mod compiler;
@@ -8,7 +9,6 @@ pub mod evaluate;
 pub mod frontend;
 pub mod gensym;
 mod inline;
-pub mod klvm;
 mod optimize;
 pub mod preprocessor;
 pub mod prims;

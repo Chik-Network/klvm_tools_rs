@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::classic::klvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
+use crate::classic::clvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
 
 use crate::compiler::sexp::SExp;
 use crate::util::u8_from_number;

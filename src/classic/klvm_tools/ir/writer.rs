@@ -1,10 +1,10 @@
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::klvm::casts::{bigint_from_bytes, TConvertOption};
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::clvm::casts::{bigint_from_bytes, TConvertOption};
 
-use crate::classic::klvm_tools::ir::r#type::IRRepr;
+use crate::classic::clvm_tools::ir::r#type::IRRepr;
 
 #[derive(Debug)]
 enum IROutputState {

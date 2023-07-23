@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use clvm_rs::reduction::EvalErr;
 
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::klvm::serialize::sexp_to_stream;
-use crate::classic::klvm::sexp::{enlist, map_m, proper_list, rest};
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::clvm::serialize::sexp_to_stream;
+use crate::classic::clvm::sexp::{enlist, map_m, proper_list, rest};
 
-use crate::classic::klvm_tools::sha256tree::sha256tree;
-use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::clvm_tools::sha256tree::sha256tree;
+use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
 use crate::compiler::frontend::frontend;
@@ -278,9 +278,9 @@ pub fn check_unused(
     input_program: &str,
 ) -> Result<(bool, String), CompileErr> {
     let mut output: Stream = Stream::new(None);
-    let pre_forms = parse_sexp(Srcloc::start(&opts.filename()), input_program)
+    let pre_forms = parse_sexp(Srcloc::start(&opts.filename()), input_program.bytes())
         .map_err(|e| CompileErr(e.0, e.1))?;
-    let g = frontend(opts.clone(), pre_forms)?;
+    let g = frontend(opts.clone(), &pre_forms)?;
     let unused = check_parameters_used_compileform(opts, Rc::new(g))?;
 
     if !unused.is_empty() {

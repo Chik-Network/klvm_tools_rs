@@ -1,8 +1,8 @@
-use klvm_rs::allocator::{Allocator, NodePtr};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator::{Allocator, NodePtr};
+use clvm_rs::reduction::EvalErr;
 
-use crate::classic::klvm::sexp::enlist;
-use crate::classic::klvm_tools::node_path::NodePath;
+use crate::classic::clvm::sexp::enlist;
+use crate::classic::clvm_tools::node_path::NodePath;
 
 lazy_static! {
     pub static ref QUOTE_ATOM: Vec<u8> = vec![1];

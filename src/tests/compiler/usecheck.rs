@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::klvm_tools::cmds::launch_tool;
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::clvm_tools::cmds::launch_tool;
 
 use crate::compiler::compiler::DefaultCompilerOpts;
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
@@ -12,10 +12,10 @@ use crate::compiler::usecheck::check_parameters_used_compileform;
 
 fn check_argument_use(input_program: String) -> Vec<String> {
     let opts: Rc<dyn CompilerOpts> = Rc::new(DefaultCompilerOpts::new(&"*test*".to_string()));
-    let pre_forms = parse_sexp(Srcloc::start(&opts.filename()), &input_program)
+    let pre_forms = parse_sexp(Srcloc::start(&opts.filename()), input_program.bytes())
         .map_err(|e| CompileErr(e.0, e.1))
         .expect("should parse");
-    let g = frontend(opts.clone(), pre_forms).expect("should pass frontend");
+    let g = frontend(opts.clone(), &pre_forms).expect("should pass frontend");
     let set = check_parameters_used_compileform(opts, Rc::new(g))
         .expect("should be able to determine unused vars");
     let mut result = Vec::new();
@@ -156,7 +156,7 @@ fn verify_use_check_with_singleton_top_layer_fails_when_we_comment_out_all_uses_
         "-i".to_string(),
         "resources/tests/usecheck-fail".to_string(),
         "--check-unused-args".to_string(),
-        "resources/tests/singleton_top_layer.klvm".to_string(),
+        "resources/tests/singleton_top_layer.clvm".to_string(),
     ]);
     assert_eq!(res, "unused arguments detected at the mod level (lower case arguments are considered uncurried by convention)\n - lineage_proof\n");
 }
@@ -170,7 +170,7 @@ fn verify_use_check_with_singleton_top_layer_works() {
         "-i".to_string(),
         "resources/tests/usecheck-work".to_string(),
         "--check-unused-args".to_string(),
-        "resources/tests/singleton_top_layer.klvm".to_string(),
+        "resources/tests/singleton_top_layer.clvm".to_string(),
     ]);
     assert!(res.len() > 0 && res.as_bytes()[0] == b'(');
 }
