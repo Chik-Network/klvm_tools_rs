@@ -1,18 +1,16 @@
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use klvm_rs::allocator::Allocator;
+use clvm_rs::allocator::Allocator;
 
-use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
 
+use crate::compiler::clvm::run;
 use crate::compiler::codegen::get_callable;
 use crate::compiler::comptypes::{BodyForm, Callable, CompilerOpts, PrimaryCodegen};
-use crate::compiler::klvm::run;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
 use crate::util::u8_from_number;
-
-const CONST_FOLD_LIMIT: usize = 10000000;
 
 fn is_at_form(head: Rc<BodyForm>) -> bool {
     match head.borrow() {
@@ -21,7 +19,6 @@ fn is_at_form(head: Rc<BodyForm>) -> bool {
     }
 }
 
-/// At this point, very rudimentary constant folding on body expressions.
 pub fn optimize_expr(
     allocator: &mut Allocator,
     opts: Rc<dyn CompilerOpts>,
@@ -89,7 +86,6 @@ pub fn optimize_expr(
                                 opts.prim_map(),
                                 code.to_sexp(),
                                 Rc::new(SExp::Nil(l)),
-                                Some(CONST_FOLD_LIMIT),
                             )
                             .map(|x| {
                                 let x_borrow: &SExp = x.borrow();

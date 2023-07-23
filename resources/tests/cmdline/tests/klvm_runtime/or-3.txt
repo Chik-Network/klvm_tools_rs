@@ -1,2 +1,0 @@
-run -i klvm_runtime '(mod (A B) (include "macros.klvm") (or))'
-()

@@ -3,18 +3,18 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::string::String;
 
-use klvm_rs::allocator::{Allocator, AtomBuf, NodePtr, SExp};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator::{Allocator, AtomBuf, NodePtr, SExp};
+use clvm_rs::reduction::EvalErr;
 
 use bls12_381::G1Affine;
 
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::klvm::serialize::sexp_to_stream;
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::clvm::serialize::sexp_to_stream;
 use crate::util::{u8_from_number, Number};
 
 #[derive(Debug)]
 pub enum CastableType {
-    KLVMObject(NodePtr),
+    CLVMObject(NodePtr),
     Bytes(Bytes),
     String(String),
     Number(Number),
@@ -53,14 +53,14 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
         match op {
             SexpStackOp::OpConvert => {
                 match top.borrow() {
-                    CastableType::KLVMObject(_) => {
+                    CastableType::CLVMObject(_) => {
                         stack.push(top.clone());
                     }
                     CastableType::TupleOf(left, right) => {
                         let target_index = stack.len();
                         match allocator.new_pair(allocator.null(), allocator.null()) {
                             Ok(pair) => {
-                                stack.push(Rc::new(CastableType::KLVMObject(pair)));
+                                stack.push(Rc::new(CastableType::CLVMObject(pair)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -76,7 +76,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     }
                     CastableType::ListOf(_sel, v) => {
                         let target_index = stack.len();
-                        stack.push(Rc::new(CastableType::KLVMObject(allocator.null())));
+                        stack.push(Rc::new(CastableType::CLVMObject(allocator.null())));
                         for vi in v.iter().take(v.len() - 1) {
                             stack.push(vi.clone());
                             ops.push(SexpStackOp::OpPrepend(target_index));
@@ -86,7 +86,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     }
                     CastableType::Bytes(b) => match allocator.new_atom(b.data()) {
                         Ok(a) => {
-                            stack.push(Rc::new(CastableType::KLVMObject(a)));
+                            stack.push(Rc::new(CastableType::CLVMObject(a)));
                         }
                         Err(e) => {
                             return Err(e);
@@ -95,7 +95,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     CastableType::String(s) => {
                         match allocator.new_atom(s.as_bytes()) {
                             Ok(a) => {
-                                stack.push(Rc::new(CastableType::KLVMObject(a)));
+                                stack.push(Rc::new(CastableType::CLVMObject(a)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -105,7 +105,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                     CastableType::Number(n) => {
                         match allocator.new_atom(&u8_from_number(n.clone())) {
                             Ok(a) => {
-                                stack.push(Rc::new(CastableType::KLVMObject(a)));
+                                stack.push(Rc::new(CastableType::CLVMObject(a)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -117,7 +117,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
 
                         match allocator.new_atom(bytes_ver.data()) {
                             Ok(a) => {
-                                stack.push(Rc::new(CastableType::KLVMObject(a)));
+                                stack.push(Rc::new(CastableType::CLVMObject(a)));
                             }
                             Err(e) => {
                                 return Err(e);
@@ -127,13 +127,13 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                 }
             }
             SexpStackOp::OpSetPair(toset, target) => match top.borrow() {
-                CastableType::KLVMObject(new_value) => match stack[target].borrow() {
-                    CastableType::KLVMObject(target_value) => match allocator.sexp(*target_value) {
+                CastableType::CLVMObject(new_value) => match stack[target].borrow() {
+                    CastableType::CLVMObject(target_value) => match allocator.sexp(*target_value) {
                         SExp::Pair(l, r) => {
                             if toset {
                                 match allocator.new_pair(l, *new_value) {
                                     Ok(pair) => {
-                                        stack[target] = Rc::new(CastableType::KLVMObject(pair));
+                                        stack[target] = Rc::new(CastableType::CLVMObject(pair));
                                     }
                                     Err(e) => {
                                         return Err(e);
@@ -142,7 +142,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                             } else {
                                 match allocator.new_pair(*new_value, r) {
                                     Ok(pair) => {
-                                        stack[target] = Rc::new(CastableType::KLVMObject(pair));
+                                        stack[target] = Rc::new(CastableType::CLVMObject(pair));
                                     }
                                     Err(e) => {
                                         return Err(e);
@@ -167,16 +167,19 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                 _ => {
                     return Err(EvalErr(
                         allocator.null(),
-                        format!("op_set_pair on atom item {target:?} in vec {stack:?} ops {ops:?}"),
+                        format!(
+                            "op_set_pair on atom item {:?} in vec {:?} ops {:?}",
+                            target, stack, ops
+                        ),
                     ));
                 }
             },
 
             SexpStackOp::OpPrepend(target) => match top.borrow() {
-                CastableType::KLVMObject(f) => match stack[target].borrow() {
-                    CastableType::KLVMObject(o) => match allocator.new_pair(*f, *o) {
+                CastableType::CLVMObject(f) => match stack[target].borrow() {
+                    CastableType::CLVMObject(o) => match allocator.new_pair(*f, *o) {
                         Ok(pair) => {
-                            stack[target] = Rc::new(CastableType::KLVMObject(pair));
+                            stack[target] = Rc::new(CastableType::CLVMObject(pair));
                         }
                         Err(e) => {
                             return Err(e);
@@ -192,7 +195,7 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
                 _ => {
                     return Err(EvalErr(
                         allocator.null(),
-                        format!("unrealized prepend {top:?}"),
+                        format!("unrealized prepend {:?}", top),
                     ));
                 }
             },
@@ -202,14 +205,14 @@ pub fn to_sexp_type(allocator: &mut Allocator, value: CastableType) -> Result<No
     if stack.len() != 1 {
         return Err(EvalErr(
             allocator.null(),
-            format!("too many values left on op stack {stack:?}"),
+            format!("too many values left on op stack {:?}", stack),
         ));
     }
 
     return match stack.pop() {
         None => Err(EvalErr(allocator.null(), "stack empty".to_string())),
         Some(top) => match top.borrow() {
-            CastableType::KLVMObject(o) => Ok(*o),
+            CastableType::CLVMObject(o) => Ok(*o),
             _ => Err(EvalErr(
                 allocator.null(),
                 format!("unimplemented {:?}", stack[0]),
@@ -232,21 +235,21 @@ pub fn bool_sexp(allocator: &mut Allocator, b: bool) -> NodePtr {
     }
 }
 
-// export class SExp implements KLVMType {
+// export class SExp implements CLVMType {
 //   atom: Optional<Bytes> = None;
-//   // this is always a 2-tuple of an object implementing the KLVM object protocol.
+//   // this is always a 2-tuple of an object implementing the CLVM object protocol.
 //   pair: Optional<Tuple<any, any>> = None;
 
-//   static readonly TRUE: SExp = new SExp(new KLVMObject(Bytes.from("0x01", "hex")));
-//   static readonly FALSE: SExp = new SExp(new KLVMObject(Bytes.NULL));
-//   static readonly __NULL__: SExp = new SExp(new KLVMObject(Bytes.NULL));
+//   static readonly TRUE: SExp = new SExp(new CLVMObject(Bytes.from("0x01", "hex")));
+//   static readonly FALSE: SExp = new SExp(new CLVMObject(Bytes.NULL));
+//   static readonly __NULL__: SExp = new SExp(new CLVMObject(Bytes.NULL));
 
 //   static to(v: CastableType): SExp {
 //     if(isSExp(v)){
 //       return v;
 //     }
 
-//     if(looks_like_klvm_object(v)){
+//     if(looks_like_clvm_object(v)){
 //       return new SExp(v);
 //     }
 
@@ -449,13 +452,10 @@ pub fn equal_to(allocator: &mut Allocator, first_: NodePtr, second_: NodePtr) ->
     let mut second = second_;
 
     loop {
-        if first == second {
-            return true;
-        }
         match (allocator.sexp(first), allocator.sexp(second)) {
             (SExp::Atom(fbuf), SExp::Atom(sbuf)) => {
-                let fvec = allocator.buf(&fbuf);
-                let svec = allocator.buf(&sbuf);
+                let fvec = allocator.buf(&fbuf).to_vec();
+                let svec = allocator.buf(&sbuf).to_vec();
                 return fvec == svec;
             }
             (SExp::Pair(ff, fr), SExp::Pair(rf, rr)) => {
@@ -488,97 +488,5 @@ pub fn flatten(allocator: &mut Allocator, tree_: NodePtr, res: &mut Vec<NodePtr>
                 tree = r;
             }
         }
-    }
-}
-
-// Wrapper around last that properly bubbles the error into EvalErr for use in
-// the classic chiklisp code.
-pub fn nonempty_last<X>(nil: NodePtr, lst: &[X]) -> Result<X, EvalErr>
-where
-    X: Copy,
-{
-    lst.last()
-        .copied()
-        .ok_or_else(|| EvalErr(nil, "alist is empty and shouldn't be".to_string()))
-}
-
-// This is a trait that generates a haskell-like ad-hoc type from the user's
-// construction of NodeSel and ThisNode.
-// the result is transformed into a NodeSel tree of NodePtr if it can be.
-// The type of the result is an ad-hoc shape derived from the shape of the
-// original request.
-#[derive(Debug, Clone)]
-pub enum NodeSel<T, U> {
-    Cons(T, U),
-}
-
-#[derive(Debug, Clone)]
-pub enum First<T> {
-    Here(T),
-}
-
-#[derive(Debug, Clone)]
-pub enum Rest<T> {
-    Here(T),
-}
-
-#[derive(Debug, Clone)]
-pub enum ThisNode {
-    Here,
-}
-
-pub trait SelectNode<T, E> {
-    fn select_nodes(&self, allocator: &mut Allocator, n: NodePtr) -> Result<T, E>;
-}
-
-impl<E> SelectNode<NodePtr, E> for ThisNode {
-    fn select_nodes(&self, _allocator: &mut Allocator, n: NodePtr) -> Result<NodePtr, E> {
-        Ok(n)
-    }
-}
-
-impl<E> SelectNode<(), E> for () {
-    fn select_nodes(&self, _allocator: &mut Allocator, _n: NodePtr) -> Result<(), E> {
-        Ok(())
-    }
-}
-
-impl<R, T, E> SelectNode<First<T>, E> for First<R>
-where
-    R: SelectNode<T, E> + Clone,
-    E: From<EvalErr>,
-{
-    fn select_nodes(&self, allocator: &mut Allocator, n: NodePtr) -> Result<First<T>, E> {
-        let First::Here(f) = &self;
-        let NodeSel::Cons(first, ()) = NodeSel::Cons(f.clone(), ()).select_nodes(allocator, n)?;
-        Ok(First::Here(first))
-    }
-}
-
-impl<R, T, E> SelectNode<Rest<T>, E> for Rest<R>
-where
-    R: SelectNode<T, E> + Clone,
-    E: From<EvalErr>,
-{
-    fn select_nodes(&self, allocator: &mut Allocator, n: NodePtr) -> Result<Rest<T>, E> {
-        let Rest::Here(f) = &self;
-        let NodeSel::Cons((), rest) = NodeSel::Cons((), f.clone()).select_nodes(allocator, n)?;
-        Ok(Rest::Here(rest))
-    }
-}
-
-impl<R, S, T, U, E> SelectNode<NodeSel<T, U>, E> for NodeSel<R, S>
-where
-    R: SelectNode<T, E>,
-    S: SelectNode<U, E>,
-    E: From<EvalErr>,
-{
-    fn select_nodes(&self, allocator: &mut Allocator, n: NodePtr) -> Result<NodeSel<T, U>, E> {
-        let NodeSel::Cons(my_left, my_right) = &self;
-        let l = first(allocator, n)?;
-        let r = rest(allocator, n)?;
-        let first = my_left.select_nodes(allocator, l)?;
-        let rest = my_right.select_nodes(allocator, r)?;
-        Ok(NodeSel::Cons(first, rest))
     }
 }

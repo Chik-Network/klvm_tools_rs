@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::classic::klvm::__type_compatibility__::Bytes;
+use crate::classic::clvm::__type_compatibility__::Bytes;
 
 #[derive(Debug)]
 pub enum IRRepr {

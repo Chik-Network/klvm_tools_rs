@@ -1,19 +1,18 @@
 use num_bigint::ToBigInt;
 use std::borrow::Borrow;
-use std::collections::HashSet;
 use std::rc::Rc;
 
-use klvm_rs::allocator::Allocator;
+use clvm_rs::allocator::Allocator;
 
-use crate::classic::klvm::__type_compatibility__::bi_one;
-use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::clvm::__type_compatibility__::bi_one;
+use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::codegen::{generate_expr_code, get_call_name, get_callable};
 use crate::compiler::compiler::is_at_capture;
 use crate::compiler::comptypes::{
     BodyForm, Callable, CompileErr, CompiledCode, CompilerOpts, InlineFunction, PrimaryCodegen,
 };
-use crate::compiler::sexp::{decode_string, SExp};
+use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
 
 use crate::util::Number;
@@ -118,37 +117,29 @@ fn pick_value_from_arg_element(
 }
 
 fn arg_lookup(
-    callsite: Srcloc,
     match_args: Rc<SExp>,
     arg_choice: usize,
     args: &[Rc<BodyForm>],
     name: Vec<u8>,
-) -> Result<Option<Rc<BodyForm>>, CompileErr> {
+) -> Option<Rc<BodyForm>> {
     match match_args.borrow() {
         SExp::Cons(_l, f, r) => {
-            if arg_choice >= args.len() {
-                return Err(CompileErr(
-                    callsite,
-                    format!("Lookup for argument {} that wasn't passed", arg_choice + 1),
-                ));
-            }
-
             match pick_value_from_arg_element(
                 f.clone(),
                 args[arg_choice].clone(),
                 &|x| x,
                 name.clone(),
             ) {
-                Some(x) => Ok(Some(x)),
-                None => arg_lookup(callsite, r.clone(), arg_choice + 1, args, name),
+                Some(x) => Some(x),
+                None => arg_lookup(r.clone(), arg_choice + 1, args, name),
             }
         }
-        _ => Ok(pick_value_from_arg_element(
+        _ => pick_value_from_arg_element(
             match_args.clone(),
             enlist_remaining_args(match_args.loc(), arg_choice, args),
             &|x: Rc<BodyForm>| x,
             name,
-        )),
+        ),
     }
 }
 
@@ -165,59 +156,34 @@ fn get_inline_callable(
 
 #[allow(clippy::too_many_arguments)]
 fn replace_inline_body(
-    visited_inlines: &mut HashSet<Vec<u8>>,
+    allocator: &mut Allocator,
     runner: Rc<dyn TRunProgram>,
     opts: Rc<dyn CompilerOpts>,
     compiler: &PrimaryCodegen,
     loc: Srcloc,
     inline: &InlineFunction,
     args: &[Rc<BodyForm>],
-    callsite: Srcloc,
     expr: Rc<BodyForm>,
 ) -> Result<Rc<BodyForm>, CompileErr> {
     match expr.borrow() {
-        BodyForm::Let(_, _) => Err(CompileErr(
+        BodyForm::Let(_l, _, _, _) => Err(CompileErr(
             loc,
             "let binding should have been hoisted before optimization".to_string(),
         )),
         BodyForm::Call(l, call_args) => {
             let mut new_args = Vec::new();
-            // Ensure that we don't count branched invocations when checking
-            // each call downstream of the main expr is recursive.
-            //
-            // Previously, this program detected as recursive:
-            // (mod (A) ;; 11
-            //   (include *standard-cl-22*)
-            //   (defun-inline <= (A B) (not (> A B)))
-            //   (assign
-            //     foo (<= 2 A)
-            //     bar (<= 1 A)
-            //
-            //     baz (<= foo bar)
-            //
-            //     yorgle (<= baz bar)
-            //
-            //     (<= yorgle foo)
-            //     ))
-            //
-            // <= appears in the arguments, but isn't called recursively on itself.
-            // We ensure here that each argument has a separate visited stack.
-            // Recursion only happens when the same stack encounters an inline
-            // twice.
             for (i, arg) in call_args.iter().enumerate() {
                 if i == 0 {
                     new_args.push(arg.clone());
                 } else {
-                    let mut new_visited = visited_inlines.clone();
                     let replaced = replace_inline_body(
-                        &mut new_visited,
+                        allocator,
                         runner.clone(),
                         opts.clone(),
                         compiler,
                         arg.loc(),
                         inline,
                         args,
-                        callsite.clone(),
                         arg.clone(),
                     )?;
                     new_args.push(replaced);
@@ -231,30 +197,17 @@ fn replace_inline_body(
             // If it's a macro we'll expand it here so we can recurse and
             // determine whether an inline is the next level.
             match get_inline_callable(opts.clone(), compiler, l.clone(), call_args[0].clone())? {
-                Callable::CallInline(l, new_inline) => {
-                    if visited_inlines.contains(&new_inline.name) {
-                        return Err(CompileErr(
-                            l,
-                            format!(
-                                "recursive call to inline function {}",
-                                decode_string(&inline.name)
-                            ),
-                        ));
-                    }
-
-                    visited_inlines.insert(new_inline.name.clone());
-
+                Callable::CallInline(_, new_inline) => {
                     let pass_on_args: Vec<Rc<BodyForm>> =
                         new_args.iter().skip(1).cloned().collect();
                     replace_inline_body(
-                        visited_inlines,
+                        allocator,
                         runner,
                         opts.clone(),
                         compiler,
-                        l, // clippy update since 1.59
+                        l.clone(),
                         &new_inline,
                         &pass_on_args,
-                        callsite,
                         new_inline.body.clone(),
                     )
                 }
@@ -265,21 +218,15 @@ fn replace_inline_body(
             }
         }
         BodyForm::Value(SExp::Atom(_, a)) => {
-            let alookup = arg_lookup(callsite, inline.args.clone(), 0, args, a.clone())?
-                .unwrap_or_else(|| expr.clone());
+            let alookup = arg_lookup(inline.args.clone(), 0, args, a.clone())
+                .map(Ok)
+                .unwrap_or_else(|| Ok(expr.clone()))?;
             Ok(alookup)
         }
         _ => Ok(expr.clone()),
     }
 }
 
-/// Given an inline function and a list of arguments, return compiled code that
-/// stands in for the inline expansion.  Along the way, generate code for the
-/// expressions in the argument list.
-///
-/// This will probably be changed at some point to return Rc<BodyForm> so it
-/// can be treated as a desugaring step that's subject to frontend optimization.
-#[allow(clippy::too_many_arguments)]
 pub fn replace_in_inline(
     allocator: &mut Allocator,
     runner: Rc<dyn TRunProgram>,
@@ -287,20 +234,16 @@ pub fn replace_in_inline(
     compiler: &PrimaryCodegen,
     loc: Srcloc,
     inline: &InlineFunction,
-    callsite: Srcloc,
     args: &[Rc<BodyForm>],
 ) -> Result<CompiledCode, CompileErr> {
-    let mut visited = HashSet::new();
-    visited.insert(inline.name.clone());
     replace_inline_body(
-        &mut visited,
+        allocator,
         runner.clone(),
         opts.clone(),
         compiler,
         loc,
         inline,
         args,
-        callsite,
         inline.body.clone(),
     )
     .and_then(|x| generate_expr_code(allocator, runner, opts, compiler, x))

@@ -3,21 +3,18 @@ use std::collections::{BTreeMap, HashMap};
 use std::mem::swap;
 use std::rc::Rc;
 
-use klvm_rs::allocator;
-use klvm_rs::allocator::{Allocator, NodePtr};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator;
+use clvm_rs::allocator::{Allocator, NodePtr};
+use clvm_rs::reduction::EvalErr;
 use num_bigint::ToBigInt;
 
-use crate::classic::klvm::__type_compatibility__::{
-    Bytes, BytesFromType, Stream, UnvalidatedBytesFromType,
-};
-use crate::classic::klvm::serialize::{sexp_from_stream, SimpleCreateKLVMObject};
-//use crate::classic::klvm::syntax_error::SyntaxErr;
-use crate::classic::klvm_tools::sha256tree::sha256tree;
-use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::clvm::serialize::{sexp_from_stream, SimpleCreateCLVMObject};
+use crate::classic::clvm_tools::sha256tree::sha256tree;
+use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::klvm;
-use crate::compiler::klvm::{convert_from_klvm_rs, run_step, RunStep};
+use crate::compiler::clvm;
+use crate::compiler::clvm::{convert_from_clvm_rs, run_step, RunStep};
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
@@ -57,16 +54,10 @@ fn get_arg_associations(
     }
 }
 
-/// An interface which allows consumers to inject their own functionality into
-/// cldb runs, including possibly mocking functions, performing tracing and
-/// other desired things.  The result of the operation can be dictated when
-/// the runnable is asked to replace the step state.
 pub trait CldbRunnable {
     fn replace_step(&self, step: &RunStep) -> Option<Result<RunStep, RunFailure>>;
 }
 
-/// A CldbEnvironment is a container for a function-oriented view of klvm programs
-/// when running in Cldb.
 pub trait CldbEnvironment {
     fn add_context(
         &self,
@@ -79,18 +70,6 @@ pub trait CldbEnvironment {
     fn get_override(&self, s: &RunStep) -> Option<Result<RunStep, RunFailure>>;
 }
 
-/// CldbRun is the main object used to run KLVM code in a stepwise way.  The main
-/// advantage of CldbRun over klvmr's runner is that the caller observes a new
-/// step being returned after it asks for each step to be run.  The progress of
-/// evaulation is observable and hopefully understandable and in an order which,
-/// combined with observing the RunStep can help with debugging.
-///
-/// CldmbRun contains a RunStep and moves evaluation forward every time its step
-/// method is called, along with having some convenience methods, like being able
-/// to ask whether the run ended and what the final result was (if it completed).
-///
-/// The result is a map of key value pairs indicating various information about
-/// the run.
 pub struct CldbRun {
     runner: Rc<dyn TRunProgram>,
     prim_map: Rc<HashMap<Vec<u8>, Rc<SExp>>>,
@@ -108,10 +87,6 @@ pub struct CldbRun {
 }
 
 impl CldbRun {
-    /// Create a new CldbRun for running a program.
-    /// Takes an CldbEnvironment and a prepared RunStep, which will be stepped
-    /// through.  The CldbEnvironment specifies places where the consumer has the
-    /// ability to examine the run step and possibly alter the result of execution.
     pub fn new(
         runner: Rc<dyn TRunProgram>,
         prim_map: Rc<HashMap<Vec<u8>, Rc<SExp>>>,
@@ -241,13 +216,8 @@ impl CldbRun {
             None
         }
     }
-
-    pub fn current_step(&self) -> RunStep {
-        self.step.clone()
-    }
 }
 
-/// A simple implementation of CldbEnvironment that does not override anything.
 pub struct CldbNoOverride {}
 
 impl CldbRunnable for CldbNoOverride {
@@ -272,29 +242,18 @@ impl Default for CldbNoOverride {
     }
 }
 
-/// Allow the caller to examine environment and return an expression that
-/// will be quoted, used in conjunction with CldbEnvironment.
+// Allow the caller to examine environment and return an expression that
+// will be quoted.
 pub trait CldbSingleBespokeOverride {
     fn get_override(&self, env: Rc<SExp>) -> Result<Rc<SExp>, RunFailure>;
 }
 
-/// Provides a collection of overrides to be used with CldbEnvironment and
-/// CldbRun to support use cases like examining the arguments given to a
-/// specific function while KLVM code is executing or to mock functions in
-/// a KLVM program.
 pub struct CldbOverrideBespokeCode {
     symbol_table: HashMap<String, String>,
     overrides: HashMap<String, Box<dyn CldbSingleBespokeOverride>>,
 }
 
 impl CldbOverrideBespokeCode {
-    /// Given the symbol table of a compiled KLVM program and a hashmap from
-    /// function names to override specifications, provie a KlvmEnvironment that
-    /// overrides the targeted functions with the given overrides, which are
-    /// objects the consumer implements CldbSingleBespokeOverride for.
-    ///
-    /// These can do whatever the user likes, from inspecting the arguments
-    /// to replacing the result.
     pub fn new(
         symbol_table: HashMap<String, String>,
         overrides: HashMap<String, Box<dyn CldbSingleBespokeOverride>>,
@@ -313,7 +272,7 @@ impl CldbOverrideBespokeCode {
         args: Rc<SExp>,
         p: Rc<RunStep>,
     ) -> Option<Result<RunStep, RunFailure>> {
-        let fun_hash = klvm::sha256tree(f);
+        let fun_hash = clvm::sha256tree(f);
         let fun_hash_str = Bytes::new(Some(BytesFromType::Raw(fun_hash))).hex();
 
         self.symbol_table
@@ -355,23 +314,16 @@ impl CldbRunnable for CldbOverrideBespokeCode {
     }
 }
 
-/// A small collection of information about the running program, including the
-/// name of the source file and the lines of the program.  When present, this
-/// allows names to be picked out of the source base and locations to be accurate.
-///
-/// Also provides a CldbRunnable that specifies the user's overrides.
 pub struct CldbRunEnv {
     input_file: Option<String>,
-    program_lines: Rc<Vec<String>>,
+    program_lines: Vec<String>,
     overrides: Box<dyn CldbRunnable>,
 }
 
 impl CldbRunEnv {
-    /// Make a new CldbRunEnv given useful information about the program being
-    /// run.
     pub fn new(
         input_file: Option<String>,
-        program_lines: Rc<Vec<String>>,
+        program_lines: Vec<String>,
         runnable: Box<dyn CldbRunnable>,
     ) -> Self {
         CldbRunEnv {
@@ -384,7 +336,7 @@ impl CldbRunEnv {
     fn extract_text(&self, l: &Srcloc) -> Option<String> {
         let use_line = if l.line < 1 { None } else { Some(l.line - 1) };
         let use_col = use_line.and(if l.col < 1 { None } else { Some(l.col - 1) });
-        let end_col = use_col.map(|c| l.until.as_ref().map(|u| u.col - 1).unwrap_or_else(|| c + 1));
+        let end_col = use_col.map(|c| l.until.map(|u| u.1 - 1).unwrap_or_else(|| c + 1));
         use_line
             .and_then(|use_line| {
                 use_col.and_then(|use_col| end_col.map(|end_col| (use_line, use_col, end_col)))
@@ -476,7 +428,7 @@ impl CldbEnvironment for CldbRunEnv {
     }
 }
 
-fn hex_to_modern_sexp_inner(
+pub fn hex_to_modern_sexp_inner(
     allocator: &mut Allocator,
     symbol_table: &HashMap<String, String>,
     loc: Srcloc,
@@ -495,30 +447,25 @@ fn hex_to_modern_sexp_inner(
             hex_to_modern_sexp_inner(allocator, symbol_table, srcloc.clone(), a)?,
             hex_to_modern_sexp_inner(allocator, symbol_table, srcloc, b)?,
         ))),
-        _ => convert_from_klvm_rs(allocator, srcloc, program).map_err(|_| {
+        _ => convert_from_clvm_rs(allocator, srcloc, program).map_err(|_| {
             EvalErr(
                 Allocator::null(allocator),
-                "klvm_rs allocator failed".to_string(),
+                "clvm_rs allocator failed".to_string(),
             )
         }),
     }
 }
 
-/// A function which, given hex input, produces equivalent SExp.
-/// All produced SExp have the location given in loc.
 pub fn hex_to_modern_sexp(
     allocator: &mut Allocator,
     symbol_table: &HashMap<String, String>,
     loc: Srcloc,
     input_program: &str,
 ) -> Result<Rc<SExp>, RunFailure> {
-    let input_serialized = Bytes::new_validated(Some(UnvalidatedBytesFromType::Hex(
-        input_program.to_string(),
-    )))
-    .map_err(|e| RunFailure::RunErr(loc.clone(), e.to_string()))?;
+    let input_serialized = Bytes::new(Some(BytesFromType::Hex(input_program.to_string())));
 
     let mut stream = Stream::new(Some(input_serialized));
-    let sexp = sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateKLVMObject {}))
+    let sexp = sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateCLVMObject {}))
         .map(|x| x.1)
         .map_err(|_| RunFailure::RunErr(loc.clone(), "Bad conversion from hex".to_string()))?;
 

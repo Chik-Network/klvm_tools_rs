@@ -1,5 +1,5 @@
 #![allow(
-    clippy::disallowed_names,
+    clippy::blacklisted_name,
     clippy::redundant_clone,
     clippy::trivially_copy_pass_by_ref
 )]
@@ -9,7 +9,7 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::classic::klvm::__type_compatibility__::Record;
+use crate::classic::clvm::__type_compatibility__::Record;
 use crate::util::{index_of_match, skip_leading};
 
 #[derive(PartialEq, Debug, Clone, Eq)]
@@ -27,7 +27,7 @@ pub enum NArgsSpec {
     Definite(usize),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub enum ArgumentValue {
     ArgString(Option<String>, String),
     ArgInt(i64),
@@ -57,7 +57,7 @@ impl ArgumentValueConv for IntConversion {
             _ => {
                 let m: &dyn Fn() -> String = self.help_messager.borrow();
                 let usage = m();
-                Err(format!("{usage}\n\nError: Invalid parameter: {v}"))
+                Err(format!("{}\n\nError: Invalid parameter: {}", usage, v))
             }
         }
     }
@@ -241,7 +241,7 @@ impl ArgumentParser {
 
                 if optional_arg_idx < 0 {
                     let usage = self.compile_help_messages();
-                    return Err(format!("{usage}\n\nError: Unknown option: {arg}"));
+                    return Err(format!("{}\n\nError: Unknown option: {}", usage, arg));
                 }
 
                 let optional_arg = &self.optional_args[optional_arg_idx as usize];
@@ -262,17 +262,11 @@ impl ArgumentParser {
 
                 ioff += 1;
 
-                // Simplify and fix the ability to read outside the vector bounds
-                // when an optional argument is given without a value.
-                let value = if i + ioff >= normalized_args.len()
-                    || (normalized_args[i + ioff].is_empty()
-                        && optional_arg.options.default.is_none())
-                {
+                let value = &normalized_args[i + ioff];
+                if value.is_empty() && optional_arg.options.default.is_none() {
                     let usage = self.compile_help_messages();
-                    return Err(format!("{usage}\n\nError: {name} requires a value"));
-                } else {
-                    &normalized_args[i + ioff]
-                };
+                    return Err(format!("{}\n\nError: {} requires a value", usage, name));
+                }
                 if optional_arg.options.action == TArgOptionAction::Store {
                     if let Ok(c) = converter.convert(value) {
                         params.insert(name, c);
@@ -307,8 +301,8 @@ impl ArgumentParser {
                 } else {
                     let usage = self.compile_help_messages();
                     return Err(format!(
-                        "{usage}\n\nError: Unknown action: {:?}",
-                        optional_arg.options.action
+                        "{}\n\nError: Unknown action: {:?}",
+                        usage, optional_arg.options.action
                     ));
                 }
             }
@@ -339,7 +333,8 @@ impl ArgumentParser {
                         if i >= input_positional_args.len() {
                             let usage = self.compile_help_messages();
                             return Err(format!(
-                                "{usage}\n\nError: Requires {nargs} positional arguments but got {i}"
+                                "{}\n\nError: Requires {} positional arguments but got {}",
+                                usage, nargs, i
                             ));
                         }
 
@@ -372,7 +367,8 @@ impl ArgumentParser {
                         if nargs == &Some(NArgsSpec::Plus) {
                             let usage = self.compile_help_messages();
                             return Err(format!(
-                                "{usage}\n\nError: The following arguments are required: {name}"
+                                "{}\n\nError: The following arguments are required: {}",
+                                usage, name
                             ));
                         }
 

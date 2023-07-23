@@ -1,4 +1,4 @@
-use klvm_tools_rs::classic::klvm_tools::cmds::opd;
+use clvm_tools_rs::classic::clvm_tools::cmds::opd;
 use std::env;
 
 fn main() {

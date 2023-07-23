@@ -6,7 +6,6 @@ pub mod casts;
 pub mod costs;
 pub mod serialize;
 pub mod sexp;
-pub mod syntax_error;
 
 struct KwAtomPair {
     v: u8,

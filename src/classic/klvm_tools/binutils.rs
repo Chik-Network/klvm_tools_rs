@@ -4,14 +4,14 @@ use std::rc::Rc;
 use encoding8::ascii::is_printable;
 use unicode_segmentation::UnicodeSegmentation;
 
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
-use klvm_rs::reduction::EvalErr;
+use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use clvm_rs::reduction::EvalErr;
 
-use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Record, Stream};
-use crate::classic::klvm::{keyword_from_atom, keyword_to_atom};
-use crate::classic::klvm_tools::ir::r#type::IRRepr;
-use crate::classic::klvm_tools::ir::reader::IRReader;
-use crate::classic::klvm_tools::ir::writer::write_ir;
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Record, Stream};
+use crate::classic::clvm::{keyword_from_atom, keyword_to_atom};
+use crate::classic::clvm_tools::ir::r#type::IRRepr;
+use crate::classic::clvm_tools::ir::reader::IRReader;
+use crate::classic::clvm_tools::ir::writer::write_ir;
 
 pub fn is_printable_string(s: &str) -> bool {
     for ch in s.graphemes(true) {
@@ -54,34 +54,23 @@ pub fn assemble_from_ir(
 }
 
 fn has_oversized_sign_extension(atom: &Bytes) -> bool {
-    // Can't have an extra sign extension if the number is too short.
-    if atom.length() < 2 {
+    if atom.length() < 3 {
         return false;
     }
 
     let data = atom.data();
     if data[0] == 0 {
-        // This is a canonical value.  The opposite is non-canonical.
         // 0x0080 -> 128
-        // 0x0000 -> 0x0000.  Non canonical because the second byte
-        // wouldn't suggest sign extension so the first 0 is redundant.
-        return data[1] & 0x80 == 0;
+        return data[1] & 0x80 == 0x80;
     } else if data[0] == 0xff {
-        // This is a canonical value.  The opposite is non-canonical.
         // 0xff00 -> -256
-        // 0xffff -> 0xffff.  Non canonical because the second byte
-        // would suggest sign extension so the first 0xff is redundant.
-        return data[1] & 0x80 != 0;
+        return data[1] & 0x80 == 0;
     }
 
-    false
+    true
 }
 
-pub fn ir_for_atom(
-    atom: &Bytes,
-    allow_keyword: bool,
-    keyword_from_atom: &Record<Vec<u8>, String>,
-) -> IRRepr {
+pub fn ir_for_atom(atom: &Bytes, allow_keyword: bool) -> IRRepr {
     if atom.length() == 0 {
         return IRRepr::Null;
     }
@@ -93,7 +82,7 @@ pub fn ir_for_atom(
         }
     } else {
         if allow_keyword {
-            if let Some(kw) = keyword_from_atom.get(atom.data()) {
+            if let Some(kw) = keyword_from_atom().get(atom.data()) {
                 return IRRepr::Symbol(kw.to_string());
             }
         }
@@ -114,8 +103,9 @@ pub fn disassemble_to_ir_with_kw(
     allocator: &mut Allocator,
     sexp: NodePtr,
     keyword_from_atom: &Record<Vec<u8>, String>,
-    mut allow_keyword: bool,
+    allow_keyword_: bool,
 ) -> IRRepr {
+    let mut allow_keyword = allow_keyword_;
     match allocator.sexp(sexp) {
         SExp::Pair(l, r) => {
             if let SExp::Pair(_, _) = allocator.sexp(l) {
@@ -129,7 +119,7 @@ pub fn disassemble_to_ir_with_kw(
 
         SExp::Atom(a) => {
             let bytes = Bytes::new(Some(BytesFromType::Raw(allocator.buf(&a).to_vec())));
-            ir_for_atom(&bytes, allow_keyword, keyword_from_atom)
+            ir_for_atom(&bytes, allow_keyword)
         }
     }
 }
@@ -154,6 +144,6 @@ pub fn assemble(allocator: &mut Allocator, s: &str) -> Result<NodePtr, EvalErr> 
     let mut reader = IRReader::new(stream);
     reader
         .read_expr()
-        .map_err(|e| EvalErr(allocator.null(), e.to_string()))
+        .map_err(|e| EvalErr(allocator.null(), e))
         .and_then(|ir| assemble_from_ir(allocator, Rc::new(ir)))
 }

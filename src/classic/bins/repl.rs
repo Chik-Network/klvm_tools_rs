@@ -1,15 +1,15 @@
-extern crate klvmr as klvm_rs;
+extern crate clvmr as clvm_rs;
 
 use std::io::{self, BufRead, Write};
 
 use std::rc::Rc;
 
-use klvm_rs::allocator::Allocator;
+use clvm_rs::allocator::Allocator;
 
-use klvm_tools_rs::compiler::compiler::DefaultCompilerOpts;
-use klvm_tools_rs::compiler::repl::Repl;
+use clvm_tools_rs::compiler::compiler::DefaultCompilerOpts;
+use clvm_tools_rs::compiler::repl::Repl;
 
-use klvm_tools_rs::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
+use clvm_tools_rs::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
 
 fn main() {
     let mut allocator = Allocator::new();
@@ -35,7 +35,7 @@ fn main() {
                         }
                     })
                     .map_err(|e| {
-                        print!("failed: {e:?}\n>>> ");
+                        print!("failed: {:?}\n>>> ", e);
                     });
             }
         }

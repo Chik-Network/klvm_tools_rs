@@ -16,9 +16,9 @@ extern crate pyo3;
 
 extern crate tempfile;
 
-extern crate klvmr as klvm_rs;
+extern crate clvmr as clvm_rs;
 
-pub mod util;
+mod util;
 
 pub mod classic;
 pub mod compiler;
@@ -29,3 +29,6 @@ mod py;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(target_family = "wasm")]
+pub mod wasm;

@@ -10,21 +10,18 @@ use rand::Rng;
 use rand_chacha::ChaChaRng;
 
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
-use std::fs;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use klvmr::allocator::Allocator;
+use clvmr::allocator::Allocator;
 
-use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero, Stream};
-use crate::classic::klvm_tools::binutils::disassemble;
-use crate::classic::klvm_tools::cmds::launch_tool;
-use crate::classic::klvm_tools::node_path::NodePath;
-
-use crate::compiler::klvm::convert_to_klvm_rs;
+use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero, Stream};
+use crate::classic::clvm_tools::binutils::disassemble;
+use crate::classic::clvm_tools::cmds::launch_tool;
+use crate::classic::clvm_tools::node_path::NodePath;
+use crate::compiler::clvm::convert_to_clvm_rs;
 use crate::compiler::sexp;
-use crate::compiler::sexp::decode_string;
 use crate::util::{number_from_u8, Number};
 
 const NUM_GEN_ATOMS: usize = 16;
@@ -283,257 +280,6 @@ fn test_forms_of_destructuring_allowed_by_classic_1() {
     );
 }
 
-fn run_dependencies(filename: &str) -> HashSet<String> {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        "-M".to_string(),
-        filename.to_owned(),
-    ])
-    .trim()
-    .to_string();
-
-    eprintln!("run_dependencies:\n{}", result_text);
-
-    let mut dep_set = HashSet::new();
-    for l in result_text.lines() {
-        if let Some(suffix_start) = l.find("resources/tests") {
-            let copied_suffix: Vec<u8> = l.as_bytes().iter().skip(suffix_start).copied().collect();
-            dep_set.insert(decode_string(&copied_suffix));
-        } else {
-            panic!("file {} isn't expected", l);
-        }
-    }
-
-    dep_set
-}
-
-#[test]
-fn test_get_dependencies_1() {
-    let dep_set = run_dependencies("resources/tests/singleton_top_layer.klvm");
-
-    eprintln!("dep_set {dep_set:?}");
-
-    let mut expect_set = HashSet::new();
-    expect_set.insert("resources/tests/condition_codes.klvm".to_owned());
-    expect_set.insert("resources/tests/curry-and-treehash.clinc".to_owned());
-    expect_set.insert("resources/tests/singleton_truths.clib".to_owned());
-
-    assert_eq!(dep_set, expect_set);
-}
-
-#[test]
-fn test_treehash_constant_embedded_classic() {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        indoc! {"
-            (mod ()
-              (include sha256tree.clib)
-              (defconst H (+ G (sha256tree (q 2 3 4))))
-              (defconst G 1)
-              H
-              )
-        "}
-        .to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert_eq!(
-        result_text,
-        "(q . 0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f9874)"
-    );
-    let result_hash = do_basic_brun(&vec!["brun".to_string(), result_text, "()".to_string()])
-        .trim()
-        .to_string();
-    assert_eq!(
-        result_hash,
-        "0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f9874"
-    );
-}
-
-#[test]
-fn test_treehash_constant_embedded_fancy_order() {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        indoc! {"
-            (mod ()
-              (include sha256tree.clib)
-              (defconst C 18)
-              (defconst H (+ C G (sha256tree (q 2 3 4))))
-              (defconst G (+ B A))
-              (defconst A 9)
-              (defconst B (* A A))
-              H
-              )
-        "}
-        .to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert_eq!(
-        result_text,
-        "(q . 0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f98df)"
-    );
-    let result_hash = do_basic_brun(&vec!["brun".to_string(), result_text, "()".to_string()])
-        .trim()
-        .to_string();
-    assert_eq!(
-        result_hash,
-        "0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f98df"
-    );
-}
-
-#[test]
-fn test_treehash_constant_embedded_fancy_order_from_fun() {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        indoc! {"
-            (mod ()
-              (include sha256tree.clib)
-              (defconst C 18)
-              (defconst H (+ C G (sha256tree (q 2 3 4))))
-              (defconst G (+ B A))
-              (defconst A 9)
-              (defconst B (* A A))
-              (defun F (X) (+ X H))
-              (F 1)
-              )
-        "}
-        .to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert_eq!(
-        result_text,
-        "(q . 0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f98e0)"
-    );
-    let result_hash = do_basic_brun(&vec!["brun".to_string(), result_text, "()".to_string()])
-        .trim()
-        .to_string();
-    assert_eq!(
-        result_hash,
-        "0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f98e0"
-    );
-}
-
-#[test]
-fn test_treehash_constant_embedded_classic_loop() {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        indoc! {"
-            (mod ()
-              (include sha256tree.clib)
-              (defconst H (+ G (sha256tree (q 2 3 4))))
-              (defconst G (logand H 1))
-              H
-              )
-        "}
-        .to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert!(result_text.starts_with("FAIL"));
-    assert!(result_text.contains("got stuck untangling defconst dependencies"));
-}
-
-#[test]
-fn test_treehash_constant_embedded_modern() {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        indoc! {"
-            (mod ()
-              (include *standard-cl-21*)
-              (include sha256tree.clib)
-              (defconst H (+ G (sha256tree (q 2 3 4))))
-              (defconst G 1)
-              H
-              )
-        "}
-        .to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert_eq!(
-        result_text,
-        "(2 (1 1 . 50565442356047746631413349885570059132562040184787699607120092457326103992436) (4 (1 2 (1 2 (3 (7 5) (1 2 (1 11 (1 . 2) (2 2 (4 2 (4 (5 5) ()))) (2 2 (4 2 (4 (6 5) ())))) 1) (1 2 (1 11 (1 . 1) 5) 1)) 1) 1) 1))"
-    );
-    let result_hash = do_basic_brun(&vec!["brun".to_string(), result_text, "()".to_string()])
-        .trim()
-        .to_string();
-    assert_eq!(
-        result_hash,
-        "0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f9874"
-    );
-}
-
-#[test]
-fn test_treehash_constant_embedded_modern_fun() {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        indoc! {"
-            (mod ()
-              (include *standard-cl-21*)
-              (include sha256tree.clib)
-              (defconst H (+ G (sha256tree (q 2 3 4))))
-              (defconst G 1)
-              (defun F (X) (+ X H))
-              (F 1)
-              )
-        "}
-        .to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert_eq!(
-        result_text,
-        "(2 (1 2 6 (4 2 (4 (1 . 1) ()))) (4 (1 (2 (1 2 (3 (7 5) (1 2 (1 11 (1 . 2) (2 4 (4 2 (4 (5 5) ()))) (2 4 (4 2 (4 (6 5) ())))) 1) (1 2 (1 11 (1 . 1) 5) 1)) 1) 1) 2 (1 16 5 (1 . 50565442356047746631413349885570059132562040184787699607120092457326103992436)) 1) 1))".to_string()
-    );
-    let result_hash = do_basic_brun(&vec!["brun".to_string(), result_text, "()".to_string()])
-        .trim()
-        .to_string();
-    assert_eq!(
-        result_hash,
-        "0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f9875"
-    );
-}
-
-#[test]
-fn test_treehash_constant_embedded_modern_loop() {
-    let result_text = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        indoc! {"
-            (mod ()
-              (include *standard-cl-21*)
-              (include sha256tree.clib)
-              (defconst H (+ G (sha256tree (q 2 3 4))))
-              (defconst G (logand H 1))
-              H
-              )
-        "}
-        .to_string(),
-    ])
-    .trim()
-    .to_string();
-    eprintln!("{result_text}");
-    assert!(result_text.starts_with("*command*"));
-    assert!(result_text.contains("stack limit exceeded"));
-}
-
 #[test]
 fn test_num_encoding_just_less_than_5_bytes() {
     let res = do_basic_run(&vec!["run".to_string(), "4281419728".to_string()])
@@ -554,27 +300,12 @@ fn test_divmod() {
 }
 
 #[cfg(test)]
-pub struct RandomKlvmNumber {
+pub struct RandomClvmNumber {
     pub intended_value: Number,
 }
 
-#[test]
-fn test_classic_mod_form() {
-    let res = do_basic_run(&vec![
-        "run".to_string(),
-        indoc! {"
-(mod () (a (mod (X) (+ 1 (* X 2))) (list 3)))
-"}
-        .to_string(),
-        "()".to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert_eq!(res, "(q . 7)");
-}
-
 #[cfg(test)]
-pub fn random_klvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomKlvmNumber {
+pub fn random_clvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomClvmNumber {
     // Make a number by creating some random atom bytes.
     // Set high bit randomly.
     let natoms = rng.gen_range(0..=NUM_GEN_ATOMS);
@@ -595,15 +326,15 @@ pub fn random_klvm_number<R: Rng + ?Sized>(rng: &mut R) -> RandomKlvmNumber {
     }
     let num = number_from_u8(&result_bytes);
 
-    RandomKlvmNumber {
+    RandomClvmNumber {
         intended_value: num,
     }
 }
 
 #[cfg(test)]
-impl Distribution<RandomKlvmNumber> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandomKlvmNumber {
-        random_klvm_number(rng)
+impl Distribution<RandomClvmNumber> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandomClvmNumber {
+        random_clvm_number(rng)
     }
 }
 
@@ -612,7 +343,7 @@ impl Distribution<RandomKlvmNumber> for Standard {
 fn test_encoding_properties() {
     let mut rng = ChaChaRng::from_entropy();
     for _ in 1..=200 {
-        let number_spec: RandomKlvmNumber = rng.gen();
+        let number_spec: RandomClvmNumber = rng.gen();
 
         // We'll have it compile a constant value.
         // The representation of the number will come out most likely
@@ -741,7 +472,7 @@ fn test_check_tricky_arg_path_random() {
         .trim()
         .to_string();
         let mut allocator = Allocator::new();
-        let converted = convert_to_klvm_rs(
+        let converted = convert_to_clvm_rs(
             &mut allocator,
             Rc::new(sexp::SExp::Atom(random_tree.loc(), k.clone())),
         )
@@ -750,122 +481,4 @@ fn test_check_tricky_arg_path_random() {
         eprintln!("run {} want {} have {}", program, disassembled, res);
         assert_eq!(disassembled, res);
     }
-}
-
-pub fn read_json_from_file(fname: &str) -> HashMap<String, String> {
-    let extra_symbols_text = fs::read_to_string(fname).expect("should have dropped main.sym");
-    eprintln!("est {extra_symbols_text}");
-    serde_json::from_str(&extra_symbols_text).expect("should be real json")
-}
-
-#[test]
-fn test_generate_extra_symbols() {
-    // Verify that extra symbols are generated.
-    // These include ..._arguments: "(A B C)" <-- arguments of the function
-    //               ..._left_env: "1" <-- specifies whether left env is used
-    let _ = do_basic_run(&vec![
-        "run".to_string(),
-        "-g".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        "-i".to_string(),
-        "resources/tests/usecheck-work".to_string(),
-        "--symbol-output-file".to_string(),
-        "/tmp/pmi_extra_symbols.sym".to_string(),
-        "resources/tests/cldb_tree/pool_member_innerpuz.cl".to_string(),
-    ])
-    .trim()
-    .to_string();
-    let syms_with_extras = read_json_from_file("/tmp/pmi_extra_symbols.sym");
-    let syms_want_extras =
-        read_json_from_file("resources/tests/cldb_tree/pool_member_innerpuz_extra.sym");
-    assert_eq!(syms_with_extras, syms_want_extras);
-    let _ = do_basic_run(&vec![
-        "run".to_string(),
-        "-i".to_string(),
-        "resources/tests".to_string(),
-        "-i".to_string(),
-        "resources/tests/usecheck-work".to_string(),
-        "--symbol-output-file".to_string(),
-        "/tmp/pmi_normal_symbols.sym".to_string(),
-        "resources/tests/cldb_tree/pool_member_innerpuz.cl".to_string(),
-    ])
-    .trim()
-    .to_string();
-    let syms_normal = read_json_from_file("/tmp/pmi_normal_symbols.sym");
-    let want_normal = read_json_from_file("resources/tests/cldb_tree/pool_member_innerpuz_ref.sym");
-    assert_eq!(syms_normal, want_normal);
-}
-
-#[test]
-fn test_classic_sets_source_file_in_symbols() {
-    let tname = "test_classic_sets_source_file_in_symbols.sym".to_string();
-    do_basic_run(&vec![
-        "run".to_string(),
-        "--extra-syms".to_string(),
-        "--symbol-output-file".to_string(),
-        tname.clone(),
-        "resources/tests/assert.klvm".to_string(),
-    ]);
-    let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
-    let decoded_symbol_file: HashMap<String, String> =
-        serde_json::from_str(&read_in_file).expect("should decode");
-    assert_eq!(
-        decoded_symbol_file.get("source_file").cloned(),
-        Some("resources/tests/assert.klvm".to_string())
-    );
-    fs::remove_file(tname).expect("should have dropped symbols");
-}
-
-#[test]
-fn test_classic_sets_source_file_in_symbols_only_when_asked() {
-    let tname = "test_classic_doesnt_source_file_in_symbols.sym".to_string();
-    do_basic_run(&vec![
-        "run".to_string(),
-        "--symbol-output-file".to_string(),
-        tname.clone(),
-        "resources/tests/assert.klvm".to_string(),
-    ]);
-    let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
-    fs::remove_file(&tname).expect("should have existed");
-    let decoded_symbol_file: HashMap<String, String> =
-        serde_json::from_str(&read_in_file).expect("should decode");
-    assert_eq!(decoded_symbol_file.get("source_file"), None);
-}
-
-#[test]
-fn test_modern_sets_source_file_in_symbols() {
-    let tname = "test_modern_sets_source_file_in_symbols.sym".to_string();
-    do_basic_run(&vec![
-        "run".to_string(),
-        "--extra-syms".to_string(),
-        "--symbol-output-file".to_string(),
-        tname.clone(),
-        "resources/tests/steprun/fact.cl".to_string(),
-    ]);
-    let read_in_file = fs::read_to_string(&tname).expect("should have dropped symbols");
-    let decoded_symbol_file: HashMap<String, String> =
-        serde_json::from_str(&read_in_file).expect("should decode");
-    fs::remove_file(&tname).expect("should have existed");
-    assert_eq!(
-        decoded_symbol_file.get("source_file").cloned(),
-        Some("resources/tests/steprun/fact.cl".to_string())
-    );
-}
-
-#[test]
-fn test_cost_reporting_0() {
-    let program = "(2 (1 2 6 (4 2 (4 (1 . 1) ()))) (4 (1 (2 (1 2 (3 (7 5) (1 2 (1 11 (1 . 2) (2 4 (4 2 (4 (5 5) ()))) (2 4 (4 2 (4 (6 5) ())))) 1) (1 2 (1 11 (1 . 1) 5) 1)) 1) 1) 2 (1 16 5 (1 . 50565442356047746631413349885570059132562040184787699607120092457326103992436)) 1) 1))";
-    let result = do_basic_brun(&vec![
-        "brun".to_string(),
-        "-c".to_string(),
-        program.to_string(),
-        "()".to_string(),
-    ])
-    .trim()
-    .to_string();
-    assert_eq!(
-        result,
-        "cost = 1978\n0x6fcb06b1fe29d132bb37f3a21b86d7cf03d636bf6230aa206486bef5e68f9875"
-    );
 }

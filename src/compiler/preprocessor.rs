@@ -1,93 +1,52 @@
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use crate::compiler::compiler::KNOWN_DIALECTS;
-use crate::compiler::comptypes::{CompileErr, CompilerOpts, IncludeDesc};
-use crate::compiler::sexp::{decode_string, enlist, parse_sexp, SExp};
-use crate::compiler::srcloc::Srcloc;
-use crate::util::ErrInto;
+use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
 
-/// Given a specification of an include file, load up the forms inside it and
-/// return them (or an error if the file couldn't be read or wasn't a list).
+use crate::compiler::comptypes::{CompileErr, CompilerOpts};
+use crate::compiler::sexp::{enlist, parse_sexp, SExp};
+use crate::compiler::srcloc::Srcloc;
+
 pub fn process_include(
     opts: Rc<dyn CompilerOpts>,
-    include: IncludeDesc,
+    name: &str,
 ) -> Result<Vec<Rc<SExp>>, CompileErr> {
-    let filename_and_content = opts.read_new_file(opts.filename(), decode_string(&include.name))?;
+    let filename_and_content = opts.read_new_file(opts.filename(), name.to_string())?;
     let content = filename_and_content.1;
-    let start_of_file = Srcloc::start(&decode_string(&include.name));
 
-    // Because we're also subsequently returning CompileErr later in the pipe,
-    // this needs an explicit err map.
-    parse_sexp(start_of_file.clone(), content.bytes())
-        .err_into()
+    let start_of_file = Srcloc::start(name);
+
+    parse_sexp(start_of_file.clone(), &content)
+        .map_err(|e| CompileErr(e.0.clone(), e.1))
         .and_then(|x| match x[0].proper_list() {
             None => Err(CompileErr(
                 start_of_file,
                 "Includes should contain a list of forms".to_string(),
             )),
-            Some(v) => Ok(v.iter().map(|x| Rc::new(x.clone())).collect()),
+            Some(v) => {
+                let res: Vec<Rc<SExp>> = v.iter().map(|x| Rc::new(x.clone())).collect();
+                Ok(res)
+            }
         })
 }
 
 /* Expand include inline in forms */
 fn process_pp_form(
     opts: Rc<dyn CompilerOpts>,
-    includes: &mut Vec<IncludeDesc>,
     body: Rc<SExp>,
 ) -> Result<Vec<Rc<SExp>>, CompileErr> {
-    // Support using the preprocessor to collect dependencies recursively.
-    let recurse_dependencies = |opts: Rc<dyn CompilerOpts>,
-                                includes: &mut Vec<IncludeDesc>,
-                                desc: IncludeDesc|
-     -> Result<(), CompileErr> {
-        let name_string = decode_string(&desc.name);
-        if KNOWN_DIALECTS.contains_key(&name_string) {
-            return Ok(());
-        }
-
-        let (full_name, content) = opts.read_new_file(opts.filename(), name_string)?;
-        includes.push(IncludeDesc {
-            name: full_name.as_bytes().to_vec(),
-            ..desc
-        });
-
-        let parsed = parse_sexp(Srcloc::start(&full_name), content.bytes())?;
-        if parsed.is_empty() {
-            return Ok(());
-        }
-
-        let program_form = parsed[0].clone();
-        if let Some(l) = program_form.proper_list() {
-            for elt in l.iter() {
-                process_pp_form(opts.clone(), includes, Rc::new(elt.clone()))?;
-            }
-        }
-
-        Ok(())
-    };
-
-    let included: Option<IncludeDesc> = body
+    let filename: Option<Vec<u8>> = body
         .proper_list()
-        .map(|x| x.iter().map(|elt| elt.atomize()).collect())
-        .map(|x: Vec<SExp>| {
+        .map(|x| {
             match &x[..] {
-                [SExp::Atom(kw, inc), SExp::Atom(nl, fname)] => {
+                [SExp::Atom(_, inc), SExp::Atom(_, fname)] => {
                     if "include".as_bytes().to_vec() == *inc {
-                        return Ok(Some(IncludeDesc {
-                            kw: kw.clone(),
-                            nl: nl.clone(),
-                            name: fname.clone(),
-                        }));
+                        return Ok(Some(fname.clone()));
                     }
                 }
-                [SExp::Atom(kw, inc), SExp::QuotedString(nl, _, fname)] => {
+                [SExp::Atom(_, inc), SExp::QuotedString(_, _, fname)] => {
                     if "include".as_bytes().to_vec() == *inc {
-                        return Ok(Some(IncludeDesc {
-                            kw: kw.clone(),
-                            nl: nl.clone(),
-                            name: fname.clone(),
-                        }));
+                        return Ok(Some(fname.clone()));
                     }
                 }
 
@@ -101,7 +60,7 @@ fn process_pp_form(
                         if "include".as_bytes().to_vec() == *inc {
                             return Err(CompileErr(
                                 body.loc(),
-                                format!("bad tail in include {body}"),
+                                format!("bad tail in include {}", body),
                             ));
                         }
                     }
@@ -112,25 +71,22 @@ fn process_pp_form(
         })
         .unwrap_or_else(|| Ok(None))?;
 
-    if let Some(i) = included {
-        recurse_dependencies(opts.clone(), includes, i.clone())?;
-        process_include(opts, i)
-    } else {
-        Ok(vec![body])
+    match filename {
+        Some(f) => process_include(
+            opts,
+            &Bytes::new(Some(BytesFromType::Raw(f.to_vec()))).decode(),
+        ),
+        _ => Ok(vec![body]),
     }
 }
 
-fn preprocess_(
-    opts: Rc<dyn CompilerOpts>,
-    includes: &mut Vec<IncludeDesc>,
-    body: Rc<SExp>,
-) -> Result<Vec<Rc<SExp>>, CompileErr> {
+fn preprocess_(opts: Rc<dyn CompilerOpts>, body: Rc<SExp>) -> Result<Vec<Rc<SExp>>, CompileErr> {
     match body.borrow() {
         SExp::Cons(_, head, rest) => match rest.borrow() {
-            SExp::Nil(_nl) => process_pp_form(opts, includes, head.clone()),
+            SExp::Nil(_nl) => process_pp_form(opts, head.clone()),
             _ => {
-                let lst = process_pp_form(opts.clone(), includes, head.clone())?;
-                let mut rs = preprocess_(opts, includes, rest.clone())?;
+                let lst = process_pp_form(opts.clone(), head.clone())?;
+                let mut rs = preprocess_(opts, rest.clone())?;
                 let mut result = lst;
                 result.append(&mut rs);
                 Ok(result)
@@ -164,14 +120,7 @@ fn inject_std_macros(body: Rc<SExp>) -> SExp {
     }
 }
 
-/// Run the preprocessor over this code, which at present just finds (include ...)
-/// forms in the source and includes the content of in a combined list.  If a file
-/// can't be found via the directory list in CompilerOrs.
-pub fn preprocess(
-    opts: Rc<dyn CompilerOpts>,
-    includes: &mut Vec<IncludeDesc>,
-    cmod: Rc<SExp>,
-) -> Result<Vec<Rc<SExp>>, CompileErr> {
+pub fn preprocess(opts: Rc<dyn CompilerOpts>, cmod: Rc<SExp>) -> Result<Vec<Rc<SExp>>, CompileErr> {
     let tocompile = if opts.stdenv() {
         let injected = inject_std_macros(cmod);
         Rc::new(injected)
@@ -179,34 +128,5 @@ pub fn preprocess(
         cmod
     };
 
-    preprocess_(opts, includes, tocompile)
-}
-
-/// Visit all files used during compilation.
-/// This reports a list of all files used while compiling the input file, via any
-/// form that causes compilation to include another file.  The file names are path
-/// expanded based on the include path they were found in (from opts).
-pub fn gather_dependencies(
-    opts: Rc<dyn CompilerOpts>,
-    real_input_path: &str,
-    file_content: &str,
-) -> Result<Vec<IncludeDesc>, CompileErr> {
-    let mut includes = Vec::new();
-    let loc = Srcloc::start(real_input_path);
-
-    let parsed = parse_sexp(loc.clone(), file_content.bytes())?;
-
-    if parsed.is_empty() {
-        return Ok(vec![]);
-    }
-
-    if let Some(l) = parsed[0].proper_list() {
-        for elt in l.iter() {
-            process_pp_form(opts.clone(), &mut includes, Rc::new(elt.clone()))?;
-        }
-    } else {
-        return Err(CompileErr(loc, "malformed list body".to_string()));
-    };
-
-    Ok(includes)
+    preprocess_(opts, tocompile)
 }

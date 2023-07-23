@@ -1,10 +1,10 @@
-# Thanks: klvm_rs' github actions.
+# Thanks: clvm_rs' github actions.
 name: Build Mac, Linux, and Windows wheels
 
 on:
   push:
     branches:
-      #- base
+      - base
       - dev
     tags:
         - '**'
@@ -20,14 +20,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        python: [3.7, 3.8, 3.9, '3.10']
+        python: [3.7, 3.8, 3.9]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
       with:
         fetch-depth: 0
 
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v2
       name: Install Python ${{ matrix.python }}
       with:
         python-version: ${{ matrix.python }}
@@ -47,8 +47,6 @@ jobs:
 
     - name: Build MacOs with maturin on Python ${{ matrix.python }}
       if: startsWith(matrix.os, 'macos')
-      env:
-        MACOSX_DEPLOYMENT_TARGET: '10.14'
       run: |
         python -m venv venv
         ln -s venv/bin/activate
@@ -58,10 +56,12 @@ jobs:
     - name: Build Linux in manylinux2010 with maturin on Python ${{ matrix.python }}
       if: startsWith(matrix.os, 'ubuntu')
       run: |
-        docker run --rm \
-          -v ${{ github.workspace }}:/ws --workdir=/ws \
-          ghcr.io/chik-network/build-images/centos-pypa-rust-x86_64 \
+        podman run --rm=true \
+          -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
+          quay.io/pypa/manylinux2010_x86_64 \
           bash -exc '\
+            curl -L https://sh.rustup.rs > rustup-init.sh && \
+            sh rustup-init.sh -y && \
             yum -y install libc6 openssl-devel && \
             source $HOME/.cargo/env && \
             rustup target add x86_64-unknown-linux-musl && \
@@ -88,8 +88,8 @@ jobs:
     - name: Build alpine wheel via docker
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
       run: |
-        cd resources/alpine && docker build -t klvm-tools-rs-alpine .
-        docker run -v ${GITHUB_WORKSPACE}:/root/klvm_tools_rs -t klvm-tools-rs-alpine sh /root/build-alpine.sh
+        cd resources/alpine && docker build -t clvm-tools-rs-alpine .
+        docker run -v ${GITHUB_WORKSPACE}:/root/clvm_tools_rs -t clvm-tools-rs-alpine sh /root/build-alpine.sh
 
     - name: Build Windows with maturin on Python ${{ matrix.python }}
       if: startsWith(matrix.os, 'windows')
@@ -101,14 +101,14 @@ jobs:
         # Find and install the newly built wheel
         python support/wheelname.py
 
-    - name: Install klvm_tools_rs wheel
+    - name: Install clvm_tools_rs wheel
       if: ${{ !startsWith(matrix.os, 'windows') }}
       run: |
         . ./activate
         ls target/wheels/
         # this mess puts the name of the `.whl` file into `$WHEEL_PATH`
         # remove the dot, use the `glob` lib to grab the file from the directory
-        export WHEEL_PATH=$(echo ${{ matrix.python }} | python -c 'DOTLESS=input().replace(".", ""); import glob; print(" ".join(filter(lambda x: "musl" not in x, glob.glob("target/wheels/klvm_tools_rs-*-cp*-*.whl"))))' )
+        export WHEEL_PATH=$(echo ${{ matrix.python }} | python -c 'DOTLESS=input().replace(".", ""); import glob; print(" ".join(filter(lambda x: "musl" not in x, glob.glob("target/wheels/clvm_tools_rs-*-cp*-*.whl"))))' )
         echo ${WHEEL_PATH}
         pip install ${WHEEL_PATH}
 
@@ -118,28 +118,26 @@ jobs:
         python -m pip install pytest
         python -m pip install blspy      
 
-    - name: install klvm & klvm_tools
+    - name: install clvm & clvm_tools
       run: |
         . ./activate
-        git clone https://github.com/Chik-Network/klvm.git --branch=main --single-branch
-        python -m pip install ./klvm
+        git clone https://github.com/Chia-Network/clvm.git --branch=main --single-branch
+        python -m pip install ./clvm
 
-        echo "installing klvm_rs via pip"
-        pip install klvm_rs
+        echo "installing clvm_rs via pip"
+        pip install clvm_rs
 
-        echo "installing klvm_tools for klvm tests"
+        echo "installing clvm_tools for clvm tests"
+        # clvm tools is required to run the tests is clvm
+        python -m pip install clvm_tools
 
-        # Ensure klvm_tools is installed from its own repo.
-        git clone https://github.com/Chik-Network/klvm_tools.git --branch=main --single-branch
-        python -m pip install ./klvm_tools
-
-    - name: Ensure klvm, klvm_rs, klvm_tools_rs are installed
+    - name: Ensure clvm, clvm_rs, clvm_tools_rs are installed
       run: |
         . ./activate
-        python -c 'import klvm'
-        python -c 'import klvm; print(klvm.__file__)'
-        python -c 'import klvm_rs; print(klvm_rs.__file__)'
-        python -c 'import klvm_tools_rs; print(klvm_tools_rs.__file__)'
+        python -c 'import clvm'
+        python -c 'import clvm; print(clvm.__file__)'
+        python -c 'import clvm_rs; print(clvm_rs.__file__)'
+        python -c 'import clvm_tools_rs; print(clvm_tools_rs.__file__)'
 
     - name: Verify recompilation of old sources match
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
@@ -148,71 +146,33 @@ jobs:
         # Build cmd line tools
         PYO3_PYTHON=`which python` cargo build --no-default-features --release
 
-        # Grab chik-blockchain
-        rm -rf chik-blockchain
-        git clone https://github.com/Chik-Network/chik-blockchain
+        # Grab chia-blockchain
+        rm -rf chia-blockchain
+        git clone https://github.com/Chia-Network/chia-blockchain
 
         # Check recompiles
-        cp support/recompile_check.py chik-blockchain
-        (cd chik-blockchain && python recompile_check.py)
+        cp support/recompile_check.py chia-blockchain
+        (cd chia-blockchain && python recompile_check.py)
 
-    - name: Test Classic command line tools with pytest
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
-      run: |
-        python -m pip install pytest
-        # This script installs the wheel built during this workflow.
-        python support/wheelname.py
-        # TODO: bring in the other tests in resources/tests/cmdline/tests besides cmds_test.py
-        (cd resources/tests/cmdline/tests && py.test cmds_test.py )
-
-    - name: Verify recompilation of cl21 sources
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
+    - name: Run tests from clvm
       run: |
         . ./activate
-        # We need chik-rs for the following.
-        pip install chik-rs
-        # Ensure we're using the sources we have.  This is a hedge against
-        # changes made by any other step doing operations on pip.
-        # This script installs the wheel built during this workflow.
-        python support/wheelname.py
-        (cd resources/tests && python check-recompiles.py)
-
-    - name: Verify recompilation follows date and modification rules
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
-      run: |
-        python support/wheelname.py
-        python resources/tests/test-klvm-recompile-behavior.py
-
-    - name: Install pytest
-      run: |
-        . ./activate
-        pip install pytest pytest-asyncio
-
-    - name: Run tests from klvm
-      run: |
-        . ./activate
-        cd klvm
-        pytest tests
-
-    - name: Run tests from klvm_tools
-      run: |
-        . ./activate
-        cd klvm_tools
-        pytest tests
+        cd clvm
+        python -m py.test tests
 
     - name: Run tests
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
       run: cargo test --no-default-features
 
-    - name: Check coverage
+    - name: Run wasm tests
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
       run: |
-        cargo install grcov
-        rustup component add llvm-tools-preview
-        python ./resources/coverage/run_coverage.py --require-percent 60
+        rustup target add wasm32-unknown-unknown
+        cargo install wasm-bindgen-cli --version 0.2.80
+        cd mock-test && npm install && make && ../resources/tests/linux-install-node.sh ./build/runmock.js
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: wheels
         path: ./target/wheels/
@@ -225,17 +185,10 @@ jobs:
       shell: bash
       run: |
         unset HAS_SECRET
-        unset HAS_AWS_SECRET
-
         if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo "HAS_SECRET=${HAS_SECRET}" >>$GITHUB_OUTPUT
-
-        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >>$GITHUB_OUTPUT
-
+        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
       env:
         SECRET: "${{ secrets.test_pypi_password }}"
-        AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
 
     - name: publish (PyPi)
       if: startsWith(github.event.ref, 'refs/tags') && steps.check_secrets.outputs.HAS_SECRET
@@ -254,26 +207,11 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.test_pypi_password }}
       run: twine upload --non-interactive --skip-existing --verbose 'target/wheels/*'
 
-    - name: Publish Dev
-      if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/dev'
-      shell: bash
-      working-directory: ./target/wheels
-      env:
-        AWS_ACCESS_KEY_ID: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
-        AWS_SECRET_ACCESS_KEY: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
-        AWS_REGION: us-west-2
-      run: |
-        FILES=$(find . -type f -name '*.whl')
-        while IFS= read -r file; do
-          filename=$(basename $file)
-          aws --no-progress s3 cp "$file" "s3://download.chik.net/simple-dev/klvm-tools-rs/$filename"
-        done <<< "$FILES"
-
   fmt:
     runs-on: ubuntu-20.04
     name: cargo fmt
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Install rust
@@ -288,7 +226,7 @@ jobs:
   clippy:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -305,7 +243,7 @@ jobs:
     runs-on: ubuntu-20.04
     name: Unit tests
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 1
       - name: Install rust
@@ -315,22 +253,3 @@ jobs:
             components: rustfmt, clippy
       - name: cargo test
         run: cargo test
-
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: nightly
-      - name: Install tarpaulin
-        run: cargo +nightly install cargo-tarpaulin
-      - name: Run tarpaulin
-        run: cargo tarpaulin --no-dead-code --engine llvm --workspace --all-features --ignore-panics --out Lcov
-      - name: Upload to Coveralls
-        uses: coverallsapp/github-action@v2
-        if: always()
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        with:
-          path-to-lcov: './lcov.info'
