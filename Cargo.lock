@@ -91,54 +91,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "klvm_tools_rs"
-version = "0.1.30"
-dependencies = [
- "binascii",
- "bls12_381",
- "bytestream",
- "klvmr",
- "derivative",
- "do-notation",
- "encoding8",
- "getrandom",
- "hex",
- "indoc 1.0.6",
- "js-sys",
- "lazy_static",
- "linked-hash-map",
- "num",
- "num-bigint",
- "num-traits",
- "pyo3",
- "pyo3-build-config 0.15.2",
- "rand",
- "rand_chacha",
- "serde_json",
- "sha2 0.9.5",
- "tempfile",
- "unicode-segmentation",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "yaml-rust",
-]
-
-[[package]]
-name = "klvmr"
-version = "0.1.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6be99c03dd33fb8006a2a7df77302727540d87f0bbe8997b153cde7463eaee4"
-dependencies = [
- "bls12_381",
- "hex",
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits",
- "sha2 0.10.2",
-]
-
-[[package]]
 name = "console_error_panic_hook"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -335,6 +287,54 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3fac17f7123a73ca62df411b1bf727ccc805daa070338fda671c86dac1bdc27"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "klvm_tools_rs"
+version = "0.1.30"
+dependencies = [
+ "binascii",
+ "bls12_381",
+ "bytestream",
+ "derivative",
+ "do-notation",
+ "encoding8",
+ "getrandom",
+ "hex",
+ "indoc 1.0.6",
+ "js-sys",
+ "klvmr",
+ "lazy_static",
+ "linked-hash-map",
+ "num",
+ "num-bigint",
+ "num-traits",
+ "pyo3",
+ "pyo3-build-config 0.15.2",
+ "rand",
+ "rand_chacha",
+ "serde_json",
+ "sha2 0.9.5",
+ "tempfile",
+ "unicode-segmentation",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "yaml-rust",
+]
+
+[[package]]
+name = "klvmr"
+version = "0.1.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6be99c03dd33fb8006a2a7df77302727540d87f0bbe8997b153cde7463eaee4"
+dependencies = [
+ "bls12_381",
+ "hex",
+ "lazy_static",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "sha2 0.10.2",
 ]
 
 [[package]]
