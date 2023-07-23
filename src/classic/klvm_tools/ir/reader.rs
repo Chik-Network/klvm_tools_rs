@@ -1,9 +1,9 @@
 use std::mem::swap;
 use std::rc::Rc;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::clvm::casts::bigint_to_bytes_clvm;
-use crate::classic::clvm_tools::ir::r#type::IRRepr;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm::casts::bigint_to_bytes_klvm;
+use crate::classic::klvm_tools::ir::r#type::IRRepr;
 use crate::util::Number;
 
 pub struct IRReader {
@@ -146,7 +146,7 @@ pub fn interpret_atom_value(chars: &[u8]) -> IRRepr {
         match String::from_utf8(chars.to_vec())
             .ok()
             .and_then(|s| s.parse::<Number>().ok())
-            .map(|n| bigint_to_bytes_clvm(&n))
+            .map(|n| bigint_to_bytes_klvm(&n))
         {
             Some(n) => IRRepr::Int(n, true),
             None => {

@@ -1,10 +1,10 @@
-use clvm_rs::allocator::{Allocator, SExp};
+use klvm_rs::allocator::{Allocator, SExp};
 use std::rc::Rc;
 
-use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble};
-use crate::classic::clvm_tools::ir::reader::read_ir;
-use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
-use crate::classic::clvm_tools::stages::stage_2::optimize::{
+use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble};
+use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::klvm_tools::stages::stage_2::optimize::{
     children_optimizer, cons_q_a_optimizer, constant_optimizer, optimize_sexp, seems_constant,
     sub_args,
 };

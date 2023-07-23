@@ -82,13 +82,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "clvm_tools_rs"
+name = "klvm_tools_rs"
 version = "0.1.25"
 dependencies = [
  "binascii",
  "bls12_381",
  "bytestream",
- "clvmr",
+ "klvmr",
  "derivative",
  "do-notation",
  "encoding8",
@@ -115,7 +115,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "clvmr"
+name = "klvmr"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39ca2623b5f3aec50a9130d203a8bf93fe203ba180d00517cef29250e99b2620"

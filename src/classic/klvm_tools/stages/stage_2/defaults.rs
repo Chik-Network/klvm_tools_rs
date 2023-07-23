@@ -1,15 +1,15 @@
 use std::rc::Rc;
 
-use clvm_rs::allocator::{Allocator, NodePtr};
+use klvm_rs::allocator::{Allocator, NodePtr};
 
-use crate::classic::clvm_tools::binutils::assemble;
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::binutils::assemble;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
 /*
 "function" is used in front of a constant uncompiled
 program to indicate we want this program literal to be
 compiled and quoted, so it can be passed as an argument
-to a compiled clvm program.
+to a compiled klvm program.
 EG: (function (+ 20 @)) should return (+ (q . 20) 1) when run.
 Thus (opt (com (q . (function (+ 20 @)))))
 should return (q . (+ (q . 20) 1))
@@ -78,7 +78,7 @@ fn default_macros_src() -> Vec<&'static str> {
               @)))
         "},
         indoc! {"
-        (q \"__chia__enlist\"
+        (q \"__chik__enlist\"
             (a (q #a (q #a 2 (c 2 (c 3 (q))))
                      (c (q #a (i 5
                                  (q #c (q . 4)
@@ -91,7 +91,7 @@ fn default_macros_src() -> Vec<&'static str> {
                 2))
         "},
         /*
-         / operator at the clvm layer is becoming deprecated and
+         / operator at the klvm layer is becoming deprecated and
         will be implemented using divmod.
          */
         indoc! {"

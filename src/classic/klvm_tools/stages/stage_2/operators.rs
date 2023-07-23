@@ -4,26 +4,26 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::chia_dialect::{ChiaDialect, NO_NEG_DIV, NO_UNKNOWN_OPS};
-use clvm_rs::cost::Cost;
-use clvm_rs::dialect::Dialect;
-use clvm_rs::reduction::{EvalErr, Reduction, Response};
-use clvm_rs::run_program::run_program;
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::chik_dialect::{ChikDialect, NO_NEG_DIV, NO_UNKNOWN_OPS};
+use klvm_rs::cost::Cost;
+use klvm_rs::dialect::Dialect;
+use klvm_rs::reduction::{EvalErr, Reduction, Response};
+use klvm_rs::run_program::run_program;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
 
-use crate::classic::clvm::keyword_from_atom;
-use crate::classic::clvm::sexp::proper_list;
+use crate::classic::klvm::keyword_from_atom;
+use crate::classic::klvm::sexp::proper_list;
 
-use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble_to_ir_with_kw};
-use crate::classic::clvm_tools::ir::reader::read_ir;
-use crate::classic::clvm_tools::ir::writer::write_ir_to_stream;
-use crate::classic::clvm_tools::stages::stage_0::{
+use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble_to_ir_with_kw};
+use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::ir::writer::write_ir_to_stream;
+use crate::classic::klvm_tools::stages::stage_0::{
     DefaultProgramRunner, RunProgramOption, TRunProgram,
 };
-use crate::classic::clvm_tools::stages::stage_2::compile::do_com_prog_for_dialect;
-use crate::classic::clvm_tools::stages::stage_2::optimize::do_optimize;
+use crate::classic::klvm_tools::stages::stage_2::compile::do_com_prog_for_dialect;
+use crate::classic::klvm_tools::stages::stage_2::optimize::do_optimize;
 
 pub struct CompilerOperators {
     base_dialect: Rc<dyn Dialect>,
@@ -35,7 +35,7 @@ pub struct CompilerOperators {
 
 impl CompilerOperators {
     pub fn new(search_paths: Vec<String>) -> Self {
-        let base_dialect = Rc::new(ChiaDialect::new(NO_NEG_DIV | NO_UNKNOWN_OPS));
+        let base_dialect = Rc::new(ChikDialect::new(NO_NEG_DIV | NO_UNKNOWN_OPS));
         let base_runner = Rc::new(DefaultProgramRunner::new());
         CompilerOperators {
             base_dialect: base_dialect.clone(),

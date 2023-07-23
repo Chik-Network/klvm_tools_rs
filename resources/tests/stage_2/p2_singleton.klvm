@@ -6,7 +6,7 @@
   ; singleton_inner_puzzle_hash is the innerpuzzlehash for our singleton at the current time
   ; my_id is the coin_id of the coin that this puzzle is locked into
 
-  (include condition_codes.clvm)
+  (include condition_codes.klvm)
   (include curry-and-treehash.clinc)
 
   ; takes a lisp tree and returns the hash of it

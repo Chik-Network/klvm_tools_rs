@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
-use crate::compiler::clvm::run;
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 use crate::compiler::compiler::{compile_file, DefaultCompilerOpts};
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
+use crate::compiler::klvm::run;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;
@@ -531,7 +531,7 @@ fn test_defconstant() {
     let result =
         run_string(&indoc!{"
             (mod (password new_puzhash amount)
-              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
               (defconstant CREATE_COIN 51)
               (defun check-password (password)
                 (let ((password-hash (sha256 password))
@@ -613,7 +613,7 @@ fn test_at_destructure_1() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
               A
               )
         "}
@@ -630,7 +630,7 @@ fn test_at_destructure_2() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
               Z
               )
         "}
@@ -647,7 +647,7 @@ fn test_at_destructure_3() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
               B
               )
         "}
@@ -664,7 +664,7 @@ fn test_at_destructure_4() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
               C
               )
         "}
@@ -681,7 +681,7 @@ fn test_at_destructure_5() {
     let result = run_string(
         &indoc! {"
             (mod (A (@ Z (B C)) D)
-              (include *standard-cl-21*) ;; Specify chialisp-21 compilation.
+              (include *standard-cl-21*) ;; Specify chiklisp-21 compilation.
               D
               )
         "}
@@ -904,7 +904,7 @@ fn test_let_inline_1() {
 }
 
 #[test]
-fn read_of_hex_constant_in_modern_chialisp() {
+fn read_of_hex_constant_in_modern_chiklisp() {
     let result = run_string(
         &indoc! {"(mod () (include *standard-cl-21*) (sha256 (q . 1) (q . 0xf22ada22a0ed015000ea157013ee62dc6ce337a649ec01054fc62ed6caac7eaf)))"}
         .to_string(),
@@ -951,7 +951,7 @@ fn sebastian_hash_test_1() {
     let result = run_string(
         &indoc! {"
 (mod (MOD_HASH TOKEN_A_AMOUNT TOKEN_B_AMOUNT K token_a_delta token_b_delta)
-    (include \"condition_codes.clvm\")
+    (include \"condition_codes.klvm\")
     (include \"curry-and-treehash.clinc\")
     (include *standard-cl-21*)
 
@@ -995,7 +995,7 @@ fn sebastian_hash_test_2() {
     let result = run_string(
         &indoc! {"
 (mod (MOD_HASH TOKEN_A_AMOUNT TOKEN_B_AMOUNT K token_a_delta token_b_delta)
-    (include \"condition_codes.clvm\")
+    (include \"condition_codes.klvm\")
     (include \"curry-and-treehash.clinc\")
 
     (defun sha256tree1 (TREE)
@@ -1055,5 +1055,5 @@ fn test_modern_inline_at_capture() {
     )
     .unwrap_err();
 
-    assert_eq!(result.1, "clvm raise in (8 5) (() 99)");
+    assert_eq!(result.1, "klvm raise in (8 5) (() 99)");
 }

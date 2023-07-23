@@ -2,22 +2,22 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::reduction::EvalErr;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
-use crate::classic::clvm::sexp::{
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::klvm::sexp::{
     enlist, first, flatten, fold_m, map_m, non_nil, proper_list, rest,
 };
-use crate::classic::clvm_tools::debug::build_symbol_dump;
-use crate::classic::clvm_tools::node_path::NodePath;
-use crate::classic::clvm_tools::stages::assemble;
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
-use crate::classic::clvm_tools::stages::stage_2::helpers::{evaluate, quote};
-use crate::classic::clvm_tools::stages::stage_2::inline::{
+use crate::classic::klvm_tools::debug::build_symbol_dump;
+use crate::classic::klvm_tools::node_path::NodePath;
+use crate::classic::klvm_tools::stages::assemble;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_2::helpers::{evaluate, quote};
+use crate::classic::klvm_tools::stages::stage_2::inline::{
     formulate_path_selections_for_destructuring, is_at_capture, is_inline_destructure,
 };
-use crate::classic::clvm_tools::stages::stage_2::optimize::optimize_sexp;
+use crate::classic::klvm_tools::stages::stage_2::optimize::optimize_sexp;
 
 lazy_static! {
     pub static ref MAIN_NAME: String = "".to_string();

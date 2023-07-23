@@ -1,13 +1,13 @@
-use clvmr::allocator::Allocator;
+use klvmr::allocator::Allocator;
 use std::rc::Rc;
 
-use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble};
-use crate::classic::clvm_tools::ir::reader::read_ir;
-use crate::classic::clvm_tools::stages::stage_2::compile::{
+use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble};
+use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::stages::stage_2::compile::{
     do_com_prog, try_expand_macro_for_atom,
 };
-use crate::classic::clvm_tools::stages::stage_2::helpers::brun;
-use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::klvm_tools::stages::stage_2::helpers::brun;
+use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
 
 fn test_expand_macro(
     allocator: &mut Allocator,

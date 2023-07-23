@@ -2,13 +2,13 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use clvm_rs::allocator;
-use clvm_rs::allocator::{Allocator, NodePtr};
+use klvm_rs::allocator;
+use klvm_rs::allocator::{Allocator, NodePtr};
 
 use num_bigint::ToBigInt;
 
-use crate::classic::clvm::__type_compatibility__::{bi_one, bi_zero, sha256, Bytes, BytesFromType};
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::{bi_one, bi_zero, sha256, Bytes, BytesFromType};
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::prims;
 use crate::compiler::runtypes::RunFailure;
@@ -116,7 +116,7 @@ fn translate_head(
             SExp::Nil(_l1) => run(allocator, runner, prim_map, sexp.clone(), context),
             _ => Err(RunFailure::RunErr(
                 sexp.loc(),
-                format!("Unexpected head form in clvm {}", sexp),
+                format!("Unexpected head form in klvm {}", sexp),
             )),
         },
     }
@@ -159,7 +159,7 @@ fn eval_args(
     }
 }
 
-pub fn convert_to_clvm_rs(
+pub fn convert_to_klvm_rs(
     allocator: &mut Allocator,
     head: Rc<SExp>,
 ) -> Result<NodePtr, RunFailure> {
@@ -182,8 +182,8 @@ pub fn convert_to_clvm_rs(
                     })
             }
         }
-        SExp::Cons(_, a, b) => convert_to_clvm_rs(allocator, a.clone()).and_then(|head| {
-            convert_to_clvm_rs(allocator, b.clone()).and_then(|tail| {
+        SExp::Cons(_, a, b) => convert_to_klvm_rs(allocator, a.clone()).and_then(|head| {
+            convert_to_klvm_rs(allocator, b.clone()).and_then(|tail| {
                 allocator.new_pair(head, tail).map_err(|_e| {
                     RunFailure::RunErr(a.loc(), format!("failed to alloc cons {}", head))
                 })
@@ -192,7 +192,7 @@ pub fn convert_to_clvm_rs(
     }
 }
 
-pub fn convert_from_clvm_rs(
+pub fn convert_from_klvm_rs(
     allocator: &mut Allocator,
     loc: Srcloc,
     head: NodePtr,
@@ -214,8 +214,8 @@ pub fn convert_from_clvm_rs(
             }
         }
         allocator::SExp::Pair(a, b) => {
-            convert_from_clvm_rs(allocator, loc.clone(), a).and_then(|h| {
-                convert_from_clvm_rs(allocator, loc.clone(), b)
+            convert_from_klvm_rs(allocator, loc.clone(), a).and_then(|h| {
+                convert_from_klvm_rs(allocator, loc.clone(), b)
                     .map(|t| Rc::new(SExp::Cons(loc.clone(), h, t)))
             })
         }
@@ -254,8 +254,8 @@ fn apply_op(
         head.clone(),
         generate_argument_refs(5_i32.to_bigint().unwrap(), args),
     ));
-    let converted_app = convert_to_clvm_rs(allocator, application.clone())?;
-    let converted_args = convert_to_clvm_rs(allocator, wrapped_args.clone())?;
+    let converted_app = convert_to_klvm_rs(allocator, application.clone())?;
+    let converted_args = convert_to_klvm_rs(allocator, wrapped_args.clone())?;
 
     runner
         .run_program(allocator, converted_app, converted_args, None)
@@ -265,7 +265,7 @@ fn apply_op(
                 format!("{} in {} {}", e.1, application, wrapped_args),
             )
         })
-        .and_then(|v| convert_from_clvm_rs(allocator, head.loc(), v.1))
+        .and_then(|v| convert_from_klvm_rs(allocator, head.loc(), v.1))
 }
 
 fn atom_value(head: Rc<SExp>) -> Result<Number, RunFailure> {

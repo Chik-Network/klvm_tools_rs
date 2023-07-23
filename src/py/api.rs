@@ -1,6 +1,6 @@
 #![allow(clippy::all)]
 // #[allow(clippy::borrow_deref_ref)]
-// Eventually this can be downgraded and applied just to compile_clvm
+// Eventually this can be downgraded and applied just to compile_klvm
 // re: https://github.com/rust-lang/rust-clippy/issues/8971
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
@@ -12,22 +12,22 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::Stream;
-use crate::classic::clvm_tools::clvmc;
-use crate::classic::clvm_tools::cmds;
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::klvm::__type_compatibility__::Stream;
+use crate::classic::klvm_tools::cmds;
+use crate::classic::klvm_tools::klvmc;
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 use crate::compiler::cldb::{
     hex_to_modern_sexp, CldbOverrideBespokeCode, CldbRun, CldbRunEnv, CldbSingleBespokeOverride,
 };
-use crate::compiler::clvm::start_step;
+use crate::compiler::klvm::start_step;
 use crate::compiler::prims;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
 
-use crate::py::pyval::{clvm_value_to_python, python_value_to_clvm};
+use crate::py::pyval::{klvm_value_to_python, python_value_to_klvm};
 
 create_exception!(mymodule, CldbError, PyException);
 
@@ -38,7 +38,7 @@ fn get_version() -> PyResult<String> {
 }
 
 #[pyfunction(arg3 = "[]", arg4 = "None")]
-fn compile_clvm(
+fn compile_klvm(
     input_path: &PyAny,
     output_path: String,
     search_paths: Vec<String>,
@@ -60,12 +60,12 @@ fn compile_clvm(
 
     let mut path_string = real_input_path.to_string();
 
-    if !std::path::Path::new(&path_string).exists() && !path_string.ends_with(".clvm") {
-        path_string += ".clvm";
+    if !std::path::Path::new(&path_string).exists() && !path_string.ends_with(".klvm") {
+        path_string += ".klvm";
     };
 
     let mut symbols = HashMap::new();
-    let compiled = clvmc::compile_clvm(&path_string, &output_path, &search_paths, &mut symbols)
+    let compiled = klvmc::compile_klvm(&path_string, &output_path, &search_paths, &mut symbols)
         .map_err(PyException::new_err)?;
 
     Python::with_gil(|py| {
@@ -152,18 +152,18 @@ impl CldbSinglePythonOverride {
 impl CldbSingleBespokeOverride for CldbSinglePythonOverride {
     fn get_override(&self, env: Rc<SExp>) -> Result<Rc<SExp>, RunFailure> {
         Python::with_gil(|py| {
-            let arg_value = clvm_value_to_python(py, env.clone());
+            let arg_value = klvm_value_to_python(py, env.clone());
             let res = self
                 .pycode
                 .call1(py, PyTuple::new(py, &vec![arg_value]))
                 .map_err(|e| RunFailure::RunErr(env.loc(), format!("{}", e)))?;
-            python_value_to_clvm(py, res)
+            python_value_to_klvm(py, res)
         })
     }
 }
 
 #[pyfunction(arg4 = "None")]
-fn start_clvm_program(
+fn start_klvm_program(
     hex_prog: String,
     hex_args: String,
     symbol_table: Option<HashMap<String, String>>,
@@ -254,11 +254,11 @@ fn launch_tool(tool_name: String, args: Vec<String>, default_stage: u32) -> Vec<
 }
 
 #[pymodule]
-fn clvm_tools_rs(py: Python, m: &PyModule) -> PyResult<()> {
+fn klvm_tools_rs(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("CldbError", py.get_type::<CldbError>())?;
-    m.add_function(wrap_pyfunction!(compile_clvm, m)?)?;
+    m.add_function(wrap_pyfunction!(compile_klvm, m)?)?;
     m.add_function(wrap_pyfunction!(get_version, m)?)?;
-    m.add_function(wrap_pyfunction!(start_clvm_program, m)?)?;
+    m.add_function(wrap_pyfunction!(start_klvm_program, m)?)?;
     m.add_function(wrap_pyfunction!(launch_tool, m)?)?;
     m.add_class::<PythonRunStep>()?;
     Ok(())

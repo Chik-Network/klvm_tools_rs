@@ -1,6 +1,6 @@
-use clvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::allocator::{Allocator, NodePtr, SExp};
 
-use crate::classic::clvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
+use crate::classic::klvm::__type_compatibility__::{sha256, Bytes, BytesFromType};
 
 pub fn sha256tree(allocator: &mut Allocator, v: NodePtr) -> Bytes {
     match allocator.sexp(v) {

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::classic::clvm::__type_compatibility__::bi_one;
+use crate::classic::klvm::__type_compatibility__::bi_one;
 
 use crate::compiler::comptypes::{
     list_to_cons, Binding, BodyForm, CompileErr, CompileForm, CompilerOpts, HelperForm,
@@ -594,21 +594,21 @@ fn is_quote_op(sexp: Rc<SExp>) -> bool {
     }
 }
 
-fn from_clvm_args(args: Rc<SExp>) -> Rc<SExp> {
+fn from_klvm_args(args: Rc<SExp>) -> Rc<SExp> {
     match args.borrow() {
         SExp::Cons(l, arg, rest) => {
-            let new_arg = from_clvm(arg.clone());
-            let new_rest = from_clvm_args(rest.clone());
+            let new_arg = from_klvm(arg.clone());
+            let new_rest = from_klvm_args(rest.clone());
             Rc::new(SExp::Cons(l.clone(), new_arg, new_rest))
         }
         _ => {
             // Treat tail of proper application list as expression.
-            from_clvm(args.clone())
+            from_klvm(args.clone())
         }
     }
 }
 
-// Form proper frontend code from CLVM.
+// Form proper frontend code from KLVM.
 // The languages are related but not identical:
 // - Left env references refer to functions from the env.
 // - Right env references refer to user arguments.
@@ -616,16 +616,16 @@ fn from_clvm_args(args: Rc<SExp>) -> Rc<SExp> {
 // being called via 'a' and use that information.
 // Bare numbers in operator position are only prims.
 // Bare numbers in argument position are references, rewrite as (@ ..)
-pub fn from_clvm(sexp: Rc<SExp>) -> Rc<SExp> {
+pub fn from_klvm(sexp: Rc<SExp>) -> Rc<SExp> {
     match sexp.borrow() {
         SExp::Atom(l, _name) => {
             // An atom encountered as an expression is treated as a path.
-            from_clvm(Rc::new(SExp::Integer(l.clone(), sexp.to_bigint().unwrap())))
+            from_klvm(Rc::new(SExp::Integer(l.clone(), sexp.to_bigint().unwrap())))
         }
         SExp::QuotedString(l, _, _v) => {
             // A string is treated as a number.
             // An atom encountered as an expression is treated as a path.
-            from_clvm(Rc::new(SExp::Integer(l.clone(), sexp.to_bigint().unwrap())))
+            from_klvm(Rc::new(SExp::Integer(l.clone(), sexp.to_bigint().unwrap())))
         }
         SExp::Integer(l, _n) => {
             // A number is treated as a reference in expression position.
@@ -653,7 +653,7 @@ pub fn from_clvm(sexp: Rc<SExp>) -> Rc<SExp> {
                     args.clone(),
                 ))
             } else {
-                let new_args = from_clvm_args(args.clone());
+                let new_args = from_klvm_args(args.clone());
                 Rc::new(SExp::Cons(l.clone(), op.clone(), new_args))
             }
         }

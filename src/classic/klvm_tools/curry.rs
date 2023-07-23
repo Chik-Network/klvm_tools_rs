@@ -1,11 +1,11 @@
 // import {assemble} from "./binutils";
 // import {run_program} from "../stages/stage_0";
 // import {match} from "./pattern_match";
-// import {Bytes, h, None, SExp, t} from "clvm";
+// import {Bytes, h, None, SExp, t} from "klvm";
 
 // /*
 // # CURRY_OBJ_CODE contains compiled code from the output of the following:
-// # run -i clvm_runtime '(mod (F . args) (include curry.clvm) (curry_args F args))'
+// # run -i klvm_runtime '(mod (F . args) (include curry.klvm) (curry_args F args))'
 // # the text below has been hand-optimized to replace `((c (q X) Y))` with `(a (q X) Y)`
 // # and `(q 0)` with `0`
 //  */

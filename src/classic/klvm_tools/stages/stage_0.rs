@@ -1,9 +1,9 @@
-use clvm_rs::allocator::{Allocator, NodePtr};
-use clvm_rs::chia_dialect::{ChiaDialect, NO_NEG_DIV, NO_UNKNOWN_OPS};
-use clvm_rs::cost::Cost;
-use clvm_rs::reduction::Response;
+use klvm_rs::allocator::{Allocator, NodePtr};
+use klvm_rs::chik_dialect::{ChikDialect, NO_NEG_DIV, NO_UNKNOWN_OPS};
+use klvm_rs::cost::Cost;
+use klvm_rs::reduction::Response;
 
-use clvm_rs::run_program::{run_program, PreEval};
+use klvm_rs::run_program::{run_program, PreEval};
 
 pub struct RunProgramOption {
     pub max_cost: Option<Cost>,
@@ -47,7 +47,7 @@ impl TRunProgram for DefaultProgramRunner {
 
         run_program(
             allocator,
-            &ChiaDialect::new(NO_NEG_DIV | NO_UNKNOWN_OPS),
+            &ChikDialect::new(NO_NEG_DIV | NO_UNKNOWN_OPS),
             program,
             args,
             max_cost,

@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
 
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
 use crate::compiler::sexp::{enlist, parse_sexp, SExp};

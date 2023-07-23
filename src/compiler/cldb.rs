@@ -3,18 +3,18 @@ use std::collections::{BTreeMap, HashMap};
 use std::mem::swap;
 use std::rc::Rc;
 
-use clvm_rs::allocator;
-use clvm_rs::allocator::{Allocator, NodePtr};
-use clvm_rs::reduction::EvalErr;
+use klvm_rs::allocator;
+use klvm_rs::allocator::{Allocator, NodePtr};
+use klvm_rs::reduction::EvalErr;
 use num_bigint::ToBigInt;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::clvm::serialize::{sexp_from_stream, SimpleCreateCLVMObject};
-use crate::classic::clvm_tools::sha256tree::sha256tree;
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm::serialize::{sexp_from_stream, SimpleCreateKLVMObject};
+use crate::classic::klvm_tools::sha256tree::sha256tree;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::clvm;
-use crate::compiler::clvm::{convert_from_clvm_rs, run_step, RunStep};
+use crate::compiler::klvm;
+use crate::compiler::klvm::{convert_from_klvm_rs, run_step, RunStep};
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
@@ -272,7 +272,7 @@ impl CldbOverrideBespokeCode {
         args: Rc<SExp>,
         p: Rc<RunStep>,
     ) -> Option<Result<RunStep, RunFailure>> {
-        let fun_hash = clvm::sha256tree(f);
+        let fun_hash = klvm::sha256tree(f);
         let fun_hash_str = Bytes::new(Some(BytesFromType::Raw(fun_hash))).hex();
 
         self.symbol_table
@@ -447,10 +447,10 @@ pub fn hex_to_modern_sexp_inner(
             hex_to_modern_sexp_inner(allocator, symbol_table, srcloc.clone(), a)?,
             hex_to_modern_sexp_inner(allocator, symbol_table, srcloc, b)?,
         ))),
-        _ => convert_from_clvm_rs(allocator, srcloc, program).map_err(|_| {
+        _ => convert_from_klvm_rs(allocator, srcloc, program).map_err(|_| {
             EvalErr(
                 Allocator::null(allocator),
-                "clvm_rs allocator failed".to_string(),
+                "klvm_rs allocator failed".to_string(),
             )
         }),
     }
@@ -465,7 +465,7 @@ pub fn hex_to_modern_sexp(
     let input_serialized = Bytes::new(Some(BytesFromType::Hex(input_program.to_string())));
 
     let mut stream = Stream::new(Some(input_serialized));
-    let sexp = sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateCLVMObject {}))
+    let sexp = sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateKLVMObject {}))
         .map(|x| x.1)
         .map_err(|_| RunFailure::RunErr(loc.clone(), "Bad conversion from hex".to_string()))?;
 

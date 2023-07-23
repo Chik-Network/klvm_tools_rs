@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
 use crate::compiler::compiler::compile_file;
 use crate::compiler::compiler::DefaultCompilerOpts;
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
 use crate::compiler::evaluate::Evaluator;
-use crate::compiler::frontend::{from_clvm, frontend};
+use crate::compiler::frontend::{from_klvm, frontend};
 use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::Srcloc;
 
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 
 fn shrink_expr_from_string(s: String) -> Result<String, CompileErr> {
     let mut allocator = Allocator::new();
@@ -70,18 +70,18 @@ fn test_basic_expand_macro_3() {
     );
 }
 
-fn convert_clvm_to_chialisp(s: String) -> Result<Rc<SExp>, CompileErr> {
+fn convert_klvm_to_chiklisp(s: String) -> Result<Rc<SExp>, CompileErr> {
     let loc = Srcloc::start(&"*program*".to_string());
     parse_sexp(loc.clone(), &s)
         .map_err(|e| {
             return CompileErr(e.0.clone(), e.1.clone());
         })
-        .map(|parsed_program| from_clvm(parsed_program[0].clone()))
+        .map(|parsed_program| from_klvm(parsed_program[0].clone()))
 }
 
 #[test]
-fn test_simple_conversion_from_clvm_to_chialisp() {
-    let converted = convert_clvm_to_chialisp("(+ (q . 3) 2)".to_string()).unwrap();
+fn test_simple_conversion_from_klvm_to_chiklisp() {
+    let converted = convert_klvm_to_chiklisp("(+ (q . 3) 2)".to_string()).unwrap();
     assert_eq!(converted.to_string(), "(+ (q . 3) (@ 2))");
 }
 

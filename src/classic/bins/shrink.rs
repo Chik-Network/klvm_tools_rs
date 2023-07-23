@@ -1,19 +1,19 @@
-extern crate clvmr as clvm_rs;
+extern crate klvmr as klvm_rs;
 
 use std::collections::HashMap;
 use std::env;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use clvm_tools_rs::compiler::compiler::DefaultCompilerOpts;
-use clvm_tools_rs::compiler::comptypes::CompileErr;
-use clvm_tools_rs::compiler::evaluate::Evaluator;
-use clvm_tools_rs::compiler::frontend::frontend;
-use clvm_tools_rs::compiler::sexp::parse_sexp;
-use clvm_tools_rs::compiler::srcloc::Srcloc;
+use klvm_tools_rs::compiler::compiler::DefaultCompilerOpts;
+use klvm_tools_rs::compiler::comptypes::CompileErr;
+use klvm_tools_rs::compiler::evaluate::Evaluator;
+use klvm_tools_rs::compiler::frontend::frontend;
+use klvm_tools_rs::compiler::sexp::parse_sexp;
+use klvm_tools_rs::compiler::srcloc::Srcloc;
 
-use clvm_tools_rs::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use klvm_tools_rs::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 
 fn main() {
     let mut allocator = Allocator::new();
@@ -21,7 +21,7 @@ fn main() {
     let opts = Rc::new(DefaultCompilerOpts::new("*program*"));
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        println!("give a chialisp program to minify");
+        println!("give a chiklisp program to minify");
         return;
     }
 

@@ -5,13 +5,13 @@
 //   EvalError,
 //   None,
 //   SExp,
-//   CLVMObject,
+//   KLVMObject,
 //   TOperatorDict,
 //   int,
 //   TPreEvalF,
 //   Bytes,
-// } from "clvm";
-// import * as binutils from "../clvm_tools/binutils";
+// } from "klvm";
+// import * as binutils from "../klvm_tools/binutils";
 
 // export const run = binutils.assemble("(a 2 3)");
 // export const brun = run;
@@ -25,7 +25,7 @@
 
 // export function run_program(
 //   program: SExp,
-//   args: CLVMObject,
+//   args: KLVMObject,
 //   option?: RunProgramOption,
 // ){
 //   let operator_lookup = (option && option.operator_lookup) || OPERATOR_LOOKUP;

@@ -2,10 +2,10 @@ use num_bigint::ToBigInt;
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::bi_one;
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm::__type_compatibility__::bi_one;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::codegen::{generate_expr_code, get_call_name, get_callable};
 use crate::compiler::compiler::is_at_capture;

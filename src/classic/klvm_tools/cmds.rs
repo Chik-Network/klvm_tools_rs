@@ -16,26 +16,26 @@ use core::cmp::max;
 use linked_hash_map::LinkedHashMap;
 use yaml_rust::{Yaml, YamlEmitter};
 
-use clvm_rs::allocator::{Allocator, NodePtr};
-use clvm_rs::reduction::EvalErr;
-use clvm_rs::run_program::PreEval;
+use klvm_rs::allocator::{Allocator, NodePtr};
+use klvm_rs::reduction::EvalErr;
+use klvm_rs::run_program::PreEval;
 
-use crate::classic::clvm::__type_compatibility__::{t, Bytes, BytesFromType, Stream, Tuple};
-use crate::classic::clvm::keyword_from_atom;
-use crate::classic::clvm::serialize::{sexp_from_stream, sexp_to_stream, SimpleCreateCLVMObject};
-use crate::classic::clvm::sexp::{enlist, proper_list, sexp_as_bin};
-use crate::classic::clvm_tools::binutils::{assemble_from_ir, disassemble, disassemble_with_kw};
-use crate::classic::clvm_tools::clvmc::detect_modern;
-use crate::classic::clvm_tools::debug::{
+use crate::classic::klvm::__type_compatibility__::{t, Bytes, BytesFromType, Stream, Tuple};
+use crate::classic::klvm::keyword_from_atom;
+use crate::classic::klvm::serialize::{sexp_from_stream, sexp_to_stream, SimpleCreateKLVMObject};
+use crate::classic::klvm::sexp::{enlist, proper_list, sexp_as_bin};
+use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble, disassemble_with_kw};
+use crate::classic::klvm_tools::debug::{
     check_unused, trace_pre_eval, trace_to_table, trace_to_text,
 };
-use crate::classic::clvm_tools::ir::reader::read_ir;
-use crate::classic::clvm_tools::sha256tree::sha256tree;
-use crate::classic::clvm_tools::stages;
-use crate::classic::clvm_tools::stages::stage_0::{
+use crate::classic::klvm_tools::ir::reader::read_ir;
+use crate::classic::klvm_tools::klvmc::detect_modern;
+use crate::classic::klvm_tools::sha256tree::sha256tree;
+use crate::classic::klvm_tools::stages;
+use crate::classic::klvm_tools::stages::stage_0::{
     DefaultProgramRunner, RunProgramOption, TRunProgram,
 };
-use crate::classic::clvm_tools::stages::stage_2::operators::run_program_for_search_paths;
+use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_search_paths;
 use crate::classic::platform::PathJoin;
 
 use crate::classic::platform::argparse::{
@@ -44,10 +44,10 @@ use crate::classic::platform::argparse::{
 };
 
 use crate::compiler::cldb::{hex_to_modern_sexp, CldbNoOverride, CldbRun, CldbRunEnv};
-use crate::compiler::clvm::start_step;
 use crate::compiler::compiler::{compile_file, run_optimizer, DefaultCompilerOpts};
 use crate::compiler::comptypes::{CompileErr, CompilerOpts};
 use crate::compiler::debug::build_symbol_table_mut;
+use crate::compiler::klvm::start_step;
 use crate::compiler::prims;
 use crate::compiler::sexp;
 use crate::compiler::sexp::parse_sexp;
@@ -102,7 +102,7 @@ pub fn call_tool(
         Argument::new()
             .set_n_args(NArgsSpec::KleeneStar)
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("path to clvm script, or literal script".to_string()),
+            .set_help("path to klvm script, or literal script".to_string()),
     );
 
     let rest_args: Vec<String> = input_args.iter().skip(1).cloned().collect();
@@ -181,7 +181,7 @@ impl TConversion for OpdConversion {
             hex_text.to_string(),
         )))));
 
-        sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateCLVMObject {}))
+        sexp_from_stream(allocator, &mut stream, Box::new(SimpleCreateKLVMObject {}))
             .map_err(|e| e.1)
             .map(|sexp| {
                 let disassembled = disassemble(allocator, sexp.1);
@@ -195,7 +195,7 @@ pub fn opc(args: &[String]) {
     call_tool(
         &mut allocator,
         "opc",
-        "Compile a clvm script.",
+        "Compile a klvm script.",
         Box::new(OpcConversion {}),
         args,
     );
@@ -206,7 +206,7 @@ pub fn opd(args: &[String]) {
     call_tool(
         &mut allocator,
         "opd",
-        "Disassemble a compiled clvm script from hex.",
+        "Disassemble a compiled klvm script from hex.",
         Box::new(OpdConversion {}),
         args,
     );
@@ -260,8 +260,8 @@ fn to_yaml(entries: &[BTreeMap<String, String>]) -> Yaml {
 pub fn cldb(args: &[String]) {
     let tool_name = "cldb".to_string();
     let props = TArgumentParserProps {
-        description: "Execute a clvm script.".to_string(),
-        prog: format!("clvm_tools {}", tool_name),
+        description: "Execute a klvm script.".to_string(),
+        prog: format!("klvm_tools {}", tool_name),
     };
 
     let mut search_paths = Vec::new();
@@ -296,14 +296,14 @@ pub fn cldb(args: &[String]) {
         vec!["path_or_code".to_string()],
         Argument::new()
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("filepath to clvm script, or a literal script".to_string()),
+            .set_help("filepath to klvm script, or a literal script".to_string()),
     );
     parser.add_argument(
         vec!["env".to_string()],
         Argument::new()
             .set_n_args(NArgsSpec::Optional)
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("clvm script environment, as clvm src, or hex".to_string()),
+            .set_help("klvm script environment, as klvm src, or hex".to_string()),
     );
     let arg_vec = args[1..].to_vec();
 
@@ -557,8 +557,8 @@ fn write_sym_output(compiled_lookup: &HashMap<String, String>, path: &str) -> Re
 
 pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, default_stage: u32) {
     let props = TArgumentParserProps {
-        description: "Execute a clvm script.".to_string(),
-        prog: format!("clvm_tools {}", tool_name),
+        description: "Execute a klvm script.".to_string(),
+        prog: format!("klvm_tools {}", tool_name),
     };
 
     let mut parser = ArgumentParser::new(Some(props));
@@ -641,14 +641,14 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
         vec!["path_or_code".to_string()],
         Argument::new()
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("filepath to clvm script, or a literal script".to_string()),
+            .set_help("filepath to klvm script, or a literal script".to_string()),
     );
     parser.add_argument(
         vec!["env".to_string()],
         Argument::new()
             .set_n_args(NArgsSpec::Optional)
             .set_type(Rc::new(PathOrCodeConv {}))
-            .set_help("clvm script environment, as clvm src, or hex".to_string()),
+            .set_help("klvm script environment, as klvm src, or hex".to_string()),
     );
     parser.add_argument(
         vec!["-m".to_string(), "--max-cost".to_string()],
@@ -760,7 +760,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
             let input_prog_sexp = sexp_from_stream(
                 &mut allocator,
                 &mut prog_stream,
-                Box::new(SimpleCreateCLVMObject {}),
+                Box::new(SimpleCreateKLVMObject {}),
             )
             .map(|x| Some(x.1))
             .unwrap();
@@ -769,7 +769,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
             let input_arg_sexp = sexp_from_stream(
                 &mut allocator,
                 &mut arg_stream,
-                Box::new(SimpleCreateCLVMObject {}),
+                Box::new(SimpleCreateKLVMObject {}),
             )
             .map(|x| Some(x.1))
             .unwrap();
@@ -925,7 +925,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
             log_entries: RefCell::new(Vec::new()),
         }));
 
-    // clvm_rs uses boxed callbacks with unspecified lifetimes so in order to
+    // klvm_rs uses boxed callbacks with unspecified lifetimes so in order to
     // support logging as intended, we must have values that can be moved so
     // the callbacks can become immortal.  Our strategy is to use channels
     // and threads for this.
@@ -1003,7 +1003,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
         input_sexp = sexp_from_stream(
             &mut allocator,
             &mut Stream::new(input_serialized),
-            Box::new(SimpleCreateCLVMObject {}),
+            Box::new(SimpleCreateKLVMObject {}),
         )
         .map(|x| Some(x.1))
         .unwrap();
@@ -1169,7 +1169,7 @@ pub fn launch_tool(stdout: &mut Stream, args: &[String], tool_name: &str, defaul
 }
 
 /*
-Copyright 2018 Chia Network Inc
+Copyright 2018 Chik Network Inc
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at

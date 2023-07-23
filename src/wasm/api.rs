@@ -10,21 +10,21 @@ use std::sync::atomic::Ordering;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
-use crate::classic::clvm::serialize::sexp_to_stream;
-use crate::classic::clvm_tools::clvmc::compile_clvm_inner;
-use crate::classic::clvm_tools::stages::stage_0::DefaultProgramRunner;
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType, Stream};
+use crate::classic::klvm::serialize::sexp_to_stream;
+use crate::classic::klvm_tools::klvmc::compile_klvm_inner;
+use crate::classic::klvm_tools::stages::stage_0::DefaultProgramRunner;
 use crate::compiler::cldb::{
     hex_to_modern_sexp, CldbOverrideBespokeCode, CldbRun, CldbRunEnv, CldbRunnable,
     CldbSingleBespokeOverride,
 };
-use crate::compiler::clvm::{convert_to_clvm_rs, start_step};
 use crate::compiler::compiler::{
     extract_program_and_env, path_to_function, rewrite_in_program, DefaultCompilerOpts,
 };
 use crate::compiler::comptypes::CompileErr;
+use crate::compiler::klvm::{convert_to_klvm_rs, start_step};
 use crate::compiler::prims;
 use crate::compiler::repl::Repl;
 use crate::compiler::runtypes::RunFailure;
@@ -108,7 +108,7 @@ where
     result
 }
 
-fn create_clvm_runner_err(error: String) -> JsValue {
+fn create_klvm_runner_err(error: String) -> JsValue {
     let array = js_sys::Array::new();
     array.set(
         0,
@@ -117,21 +117,21 @@ fn create_clvm_runner_err(error: String) -> JsValue {
     return object_to_value(&js_sys::Object::from_entries(&array).unwrap());
 }
 
-fn create_clvm_runner_run_failure(err: &RunFailure) -> JsValue {
+fn create_klvm_runner_run_failure(err: &RunFailure) -> JsValue {
     match err {
         RunFailure::RunErr(l, e) => {
-            return create_clvm_runner_err(format!("{}: Error {}", l.to_string(), e));
+            return create_klvm_runner_err(format!("{}: Error {}", l.to_string(), e));
         }
         RunFailure::RunExn(l, e) => {
-            return create_clvm_runner_err(format!("{}: Exn {}", l.to_string(), e.to_string()))
+            return create_klvm_runner_err(format!("{}: Exn {}", l.to_string(), e.to_string()))
         }
     }
 }
 
-fn create_clvm_compile_failure(err: &CompileErr) -> JsValue {
+fn create_klvm_compile_failure(err: &CompileErr) -> JsValue {
     match err {
         CompileErr(l, e) => {
-            return create_clvm_runner_err(format!("{}: Error {}", l.to_string(), e));
+            return create_klvm_runner_err(format!("{}: Error {}", l.to_string(), e));
         }
     }
 }
@@ -174,7 +174,7 @@ impl CldbSingleBespokeOverride for JsBespokeOverride {
  * return a runner object.
  */
 #[wasm_bindgen]
-pub fn create_clvm_runner(
+pub fn create_klvm_runner(
     hex_prog: String,
     args_js: JsValue,
     symbols: &js_sys::Object,
@@ -190,7 +190,7 @@ pub fn create_clvm_runner(
     let args = match sexp_from_js_object(args_srcloc.clone(), &args_js) {
         Some(v) => v,
         None => {
-            return create_clvm_runner_run_failure(&RunFailure::RunErr(
+            return create_klvm_runner_run_failure(&RunFailure::RunErr(
                 args_srcloc.clone(),
                 "failed to convert args to sexp".to_string(),
             ));
@@ -200,7 +200,7 @@ pub fn create_clvm_runner(
     let symbol_table = match read_string_to_string_map(symbols) {
         Ok(s) => s,
         Err(e) => {
-            return create_clvm_runner_run_failure(&RunFailure::RunErr(
+            return create_klvm_runner_run_failure(&RunFailure::RunErr(
                 args_srcloc.clone(),
                 format!("failed to read symbol table: {}", e),
             ));
@@ -230,7 +230,7 @@ pub fn create_clvm_runner(
     ) {
         Ok(v) => v,
         Err(e) => {
-            return create_clvm_runner_run_failure(&e);
+            return create_klvm_runner_run_failure(&e);
         }
     };
 
@@ -258,7 +258,7 @@ pub fn final_value(runner: i32) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn remove_clvm_runner(runner: i32) {
+pub fn remove_klvm_runner(runner: i32) {
     remove_runner(runner);
 }
 
@@ -310,7 +310,7 @@ pub fn compile(input_js: JsValue, filename_js: JsValue, search_paths_js: Vec<JsV
         .map(|j| j.as_string().unwrap())
         .collect();
 
-    match compile_clvm_inner(
+    match compile_klvm_inner(
         &mut allocator,
         &search_paths,
         &mut symbol_table,
@@ -319,7 +319,7 @@ pub fn compile(input_js: JsValue, filename_js: JsValue, search_paths_js: Vec<JsV
         &mut result_stream,
     ) {
         Ok(_) => make_compile_output(&result_stream, &symbol_table),
-        Err(e) => create_clvm_runner_err(e),
+        Err(e) => create_klvm_runner_err(e),
     }
 }
 
@@ -347,13 +347,13 @@ pub fn compose_run_function(
     let symbol_table = match read_string_to_string_map(symbol_table_js) {
         Ok(s) => s,
         Err(e) => {
-            return create_clvm_compile_failure(&CompileErr(loc.clone(), e));
+            return create_klvm_compile_failure(&CompileErr(loc.clone(), e));
         }
     };
     let function_hash = match find_function_hash(&symbol_table, &function_name) {
         Some(f) => f,
         _ => {
-            return create_clvm_compile_failure(&CompileErr(
+            return create_klvm_compile_failure(&CompileErr(
                 loc.clone(),
                 format!("function not found in symbols: {}", function_name),
             ));
@@ -362,13 +362,13 @@ pub fn compose_run_function(
     let program = match hex_to_modern_sexp(&mut allocator, &symbol_table, loc.clone(), &hex_prog) {
         Ok(v) => v,
         Err(e) => {
-            return create_clvm_runner_run_failure(&e);
+            return create_klvm_runner_run_failure(&e);
         }
     };
     let main_env = match extract_program_and_env(program.clone()) {
         Some(em) => em,
         _ => {
-            return create_clvm_compile_failure(&CompileErr(
+            return create_klvm_compile_failure(&CompileErr(
                 program.loc(),
                 "could not extract env from program".to_string(),
             ));
@@ -378,7 +378,7 @@ pub fn compose_run_function(
     let function_path = match path_to_function(main_env.1.clone(), &hash_bytes.data().clone()) {
         Some(p) => p,
         _ => {
-            return create_clvm_compile_failure(&CompileErr(
+            return create_klvm_compile_failure(&CompileErr(
                 program.loc(),
                 format!(
                     "could not find function with hash from symbols: {}",
@@ -390,13 +390,13 @@ pub fn compose_run_function(
 
     let new_program = rewrite_in_program(function_path, main_env.1);
     let mut result_stream = Stream::new(None);
-    let clvm_rs_value = match convert_to_clvm_rs(&mut allocator, new_program) {
+    let klvm_rs_value = match convert_to_klvm_rs(&mut allocator, new_program) {
         Ok(c) => c,
         Err(e) => {
-            return create_clvm_runner_run_failure(&e);
+            return create_klvm_runner_run_failure(&e);
         }
     };
-    sexp_to_stream(&mut allocator, clvm_rs_value, &mut result_stream);
+    sexp_to_stream(&mut allocator, klvm_rs_value, &mut result_stream);
     JsValue::from_str(&result_stream.get_value().hex())
 }
 
@@ -464,7 +464,7 @@ pub fn repl_run_string(repl_id: i32, input: String) -> JsValue {
         })
         .map(|v| v.map(|v| js_object_from_sexp(v.to_sexp())))
         .unwrap_or_else(|e| {
-            Some(create_clvm_runner_err(format!(
+            Some(create_klvm_runner_err(format!(
                 "{}: {}",
                 e.0.to_string(),
                 e.1
@@ -478,5 +478,5 @@ pub fn sexp_to_string(v: &JsValue) -> JsValue {
     let loc = Srcloc::start(&"*val*".to_string());
     sexp_from_js_object(loc, v)
         .map(|s| JsValue::from_str(&s.to_string()))
-        .unwrap_or_else(|| create_clvm_runner_err("unable to convert to value".to_string()))
+        .unwrap_or_else(|| create_klvm_runner_err("unable to convert to value".to_string()))
 }
