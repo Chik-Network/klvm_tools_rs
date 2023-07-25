@@ -72,9 +72,9 @@ impl ArgumentValueConv for PathOrCodeConv {
 // }
 
 pub trait TConversion {
-    fn invoke<'a>(
+    fn invoke(
         &self,
-        allocator: &'a mut Allocator,
+        allocator: &mut Allocator,
         text: &str,
     ) -> Result<Tuple<NodePtr, String>, String>;
 }
@@ -158,9 +158,9 @@ pub fn call_tool(
 pub struct OpcConversion {}
 
 impl TConversion for OpcConversion {
-    fn invoke<'a>(
+    fn invoke(
         &self,
-        allocator: &'a mut Allocator,
+        allocator: &mut Allocator,
         hex_text: &str,
     ) -> Result<Tuple<NodePtr, String>, String> {
         read_ir(hex_text)
@@ -172,9 +172,9 @@ impl TConversion for OpcConversion {
 pub struct OpdConversion {}
 
 impl TConversion for OpdConversion {
-    fn invoke<'a>(
+    fn invoke(
         &self,
-        allocator: &'a mut Allocator,
+        allocator: &mut Allocator,
         hex_text: &str,
     ) -> Result<Tuple<NodePtr, String>, String> {
         let mut stream = Stream::new(Some(Bytes::new(Some(BytesFromType::Hex(
