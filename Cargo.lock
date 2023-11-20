@@ -116,59 +116,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "klvm_tools_rs"
-version = "0.1.38"
-dependencies = [
- "binascii",
- "bls12_381",
- "bytestream",
- "klvmr",
- "derivative",
- "do-notation",
- "encoding8",
- "getrandom",
- "hex",
- "indoc 1.0.9",
- "js-sys",
- "lazy_static",
- "linked-hash-map",
- "num",
- "num-bigint",
- "num-traits",
- "pyo3",
- "pyo3-build-config 0.15.2",
- "rand",
- "rand_chacha",
- "serde",
- "serde_json",
- "sha2 0.9.9",
- "tempfile",
- "unicode-segmentation",
- "wasm-bindgen",
- "wasm-bindgen-test",
- "yaml-rust",
-]
-
-[[package]]
-name = "klvmr"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc84fad1d0571cbff6c98846c258676e2939b8764ecaebbf1e0b6f0fc07c4176"
-dependencies = [
- "bls12_381",
- "getrandom",
- "group",
- "hex",
- "k256",
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits",
- "p256",
- "sha2 0.9.9",
-]
-
-[[package]]
 name = "console_error_panic_hook"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -463,6 +410,59 @@ dependencies = [
  "once_cell",
  "sha2 0.10.7",
  "signature",
+]
+
+[[package]]
+name = "klvm_tools_rs"
+version = "0.1.38"
+dependencies = [
+ "binascii",
+ "bls12_381",
+ "bytestream",
+ "derivative",
+ "do-notation",
+ "encoding8",
+ "getrandom",
+ "hex",
+ "indoc 1.0.9",
+ "js-sys",
+ "klvmr",
+ "lazy_static",
+ "linked-hash-map",
+ "num",
+ "num-bigint",
+ "num-traits",
+ "pyo3",
+ "pyo3-build-config 0.15.2",
+ "rand",
+ "rand_chacha",
+ "serde",
+ "serde_json",
+ "sha2 0.9.9",
+ "tempfile",
+ "unicode-segmentation",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+ "yaml-rust",
+]
+
+[[package]]
+name = "klvmr"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc84fad1d0571cbff6c98846c258676e2939b8764ecaebbf1e0b6f0fc07c4176"
+dependencies = [
+ "bls12_381",
+ "getrandom",
+ "group",
+ "hex",
+ "k256",
+ "lazy_static",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "p256",
+ "sha2 0.9.9",
 ]
 
 [[package]]
