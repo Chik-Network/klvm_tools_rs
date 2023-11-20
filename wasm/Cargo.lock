@@ -163,7 +163,7 @@ dependencies = [
 name = "klvmr"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cd344b6dc76235f446025fe9ebe54aa6131e2e59acb49e16be48a3bb3492491"
+checksum = "fc84fad1d0571cbff6c98846c258676e2939b8764ecaebbf1e0b6f0fc07c4176"
 dependencies = [
  "bls12_381",
  "getrandom",
