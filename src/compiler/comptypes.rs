@@ -9,9 +9,18 @@ use klvm_rs::allocator::Allocator;
 use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
 use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
-use crate::compiler::klvm::sha256tree;
-use crate::compiler::sexp::{decode_string, SExp};
+use crate::compiler::dialect::AcceptedDialect;
+use crate::compiler::klvm::{sha256tree, truthy};
+use crate::compiler::sexp::{decode_string, enlist, SExp};
 use crate::compiler::srcloc::Srcloc;
+
+// Note: only used in tests, not normally dependencies.
+#[cfg(test)]
+use crate::compiler::compiler::DefaultCompilerOpts;
+#[cfg(test)]
+use crate::compiler::frontend::compile_bodyform;
+#[cfg(test)]
+use crate::compiler::sexp::parse_sexp;
 
 /// The basic error type.  It contains a Srcloc identifying coordinates of the
 /// error in the source file and a message.  It probably should be made even better
@@ -81,6 +90,24 @@ pub fn list_to_cons(l: Srcloc, list: &[Rc<SExp>]) -> SExp {
     result
 }
 
+/// Specifies the pattern that is destructured in let bindings.
+#[derive(Clone, Debug, Serialize)]
+pub enum BindingPattern {
+    /// The whole expression is bound to this name.
+    Name(Vec<u8>),
+    /// Specifies a tree of atoms into which the value will be destructured.
+    Complex(Rc<SExp>),
+}
+
+/// If present, states an intention for desugaring of this let form to favor
+/// inlining or functions.
+#[derive(Clone, Debug, Serialize)]
+pub enum LetFormInlineHint {
+    NoChoice,
+    Inline(Srcloc),
+    NonInline(Srcloc),
+}
+
 /// A binding from a (let ...) form.  Specifies the name of the bound variable
 /// the location of the whole binding form, the location of the name atom (nl)
 /// and the body as a BodyForm (which are chiklisp expressions).
@@ -90,8 +117,11 @@ pub struct Binding {
     pub loc: Srcloc,
     /// Location of the name atom specifically.
     pub nl: Srcloc,
-    /// The name.
-    pub name: Vec<u8>,
+    /// Specifies the pattern which is extracted from the expression, which can
+    /// be a Name (a single name names the whole subexpression) or Complex which
+    /// can destructure and is used in code that extends cl21 past the definition
+    /// of the language at that point.
+    pub pattern: BindingPattern,
     /// The expression the binding refers to.
     pub body: Rc<BodyForm>,
 }
@@ -104,6 +134,7 @@ pub struct Binding {
 pub enum LetFormKind {
     Parallel,
     Sequential,
+    Assign,
 }
 
 /// Information about a let form.  Encapsulates everything except whether it's
@@ -114,16 +145,29 @@ pub struct LetData {
     pub loc: Srcloc,
     /// The location specifically of the let or let* keyword.
     pub kw: Option<Srcloc>,
+    /// Inline hint.
+    pub inline_hint: Option<LetFormInlineHint>,
     /// The bindings introduced.
     pub bindings: Vec<Rc<Binding>>,
     /// The expression evaluated in the context of all the bindings.
     pub body: Rc<BodyForm>,
 }
 
+/// Describes a lambda used in an expression.
+#[derive(Clone, Debug, Serialize)]
+pub struct LambdaData {
+    pub loc: Srcloc,
+    pub kw: Option<Srcloc>,
+    pub capture_args: Rc<SExp>,
+    pub captures: Rc<BodyForm>,
+    pub args: Rc<SExp>,
+    pub body: Rc<BodyForm>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub enum BodyForm {
     /// A let or let* form (depending on LetFormKind).
-    Let(LetFormKind, LetData),
+    Let(LetFormKind, Box<LetData>),
     /// An explicitly quoted constant of some kind.
     Quoted(SExp),
     /// An undiferentiated "value" of some kind in the source language.
@@ -142,11 +186,31 @@ pub enum BodyForm {
     ///
     /// So tail improper calls aren't allowed.  In real lisp, (apply ...) can
     /// generate them if needed.
-    Call(Srcloc, Vec<Rc<BodyForm>>),
+    Call(Srcloc, Vec<Rc<BodyForm>>, Option<Rc<BodyForm>>),
     /// (mod ...) can be used in chiklisp as an expression, in which it returns
     /// the compiled code.  Here, it contains a CompileForm, which represents
     /// the full significant input of a program (yielded by frontend()).
     Mod(Srcloc, CompileForm),
+    /// A lambda form (lambda (...) ...)
+    ///
+    /// The lambda arguments are in two parts:
+    ///
+    /// (lambda ((& captures) real args) ...)
+    ///
+    /// Where the parts in captures are captured from the hosting environment.
+    /// Captures are optional.
+    /// The real args are given in the indicated shape when the lambda is applied
+    /// with the 'a' operator.
+    Lambda(Box<LambdaData>),
+}
+
+/// Convey information about synthetically generated helper forms.
+#[derive(Clone, Debug, Serialize)]
+pub enum SyntheticType {
+    NoInlinePreference,
+    MaybeRecursive,
+    WantInline,
+    WantNonInline,
 }
 
 /// The information needed to know about a defun.  Whether it's inline is left in
@@ -167,6 +231,8 @@ pub struct DefunData {
     pub args: Rc<SExp>,
     /// The body expression of the defun.
     pub body: Rc<BodyForm>,
+    /// Whether this defun was created during desugaring.
+    pub synthetic: Option<SyntheticType>,
 }
 
 /// Specifies the information extracted from a macro definition allowing the
@@ -225,7 +291,18 @@ pub enum HelperForm {
     /// A macro definition (see DefmacData).
     Defmacro(DefmacData),
     /// A function definition (see DefunData).
-    Defun(bool, DefunData),
+    Defun(bool, Box<DefunData>),
+}
+
+/// To what purpose is the file included.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub enum IncludeProcessType {
+    /// Include the bytes on disk as an atom.
+    Bin,
+    /// Parse the hex on disk and present it as a klvm value.
+    Hex,
+    /// Read klvm in s-expression form as a klvm value.
+    SExpression,
 }
 
 /// A description of an include form.  Here, records the locations of the various
@@ -239,6 +316,7 @@ pub struct IncludeDesc {
     pub nl: Srcloc,
     /// The relative path to a target or a special directive name.
     pub name: Vec<u8>,
+    pub kind: Option<IncludeProcessType>,
 }
 
 impl IncludeDesc {
@@ -309,6 +387,10 @@ pub trait CompilerOpts {
     /// complex constants, and into (com ...) forms.  This allows the CompilerOpts
     /// to carry this info across boundaries into a new context.
     fn code_generator(&self) -> Option<PrimaryCodegen>;
+    /// Get the dialect declared in the toplevel program.
+    fn dialect(&self) -> AcceptedDialect;
+    /// Disassembly version (for disassembly style serialization)
+    fn disassembly_ver(&self) -> Option<usize>;
     /// Specifies whether code is being generated on behalf of an inner defun in
     /// the program.
     fn in_defun(&self) -> bool;
@@ -333,8 +415,12 @@ pub trait CompilerOpts {
     /// Specifies the search paths we're carrying.
     fn get_search_paths(&self) -> Vec<String>;
 
+    /// Set the dialect.
+    fn set_dialect(&self, dialect: AcceptedDialect) -> Rc<dyn CompilerOpts>;
     /// Set search paths.
     fn set_search_paths(&self, dirs: &[String]) -> Rc<dyn CompilerOpts>;
+    /// Set disassembly version for.
+    fn set_disassembly_ver(&self, ver: Option<usize>) -> Rc<dyn CompilerOpts>;
     /// Set whether we're compiling on behalf of a defun.
     fn set_in_defun(&self, new_in_defun: bool) -> Rc<dyn CompilerOpts>;
     /// Set whether to inject the standard environment.
@@ -357,7 +443,7 @@ pub trait CompilerOpts {
         &self,
         inc_from: String,
         filename: String,
-    ) -> Result<(String, String), CompileErr>;
+    ) -> Result<(String, Vec<u8>), CompileErr>;
 
     /// Given a parsed SExp, compile it as an independent program based on the
     /// settings given here.  The result is bare generated code.
@@ -377,6 +463,33 @@ pub struct ModAccum {
     pub includes: Vec<IncludeDesc>,
     pub helpers: Vec<HelperForm>,
     pub exp_form: Option<CompileForm>,
+}
+
+/// A specification of a function call including elements useful for evaluation.
+#[derive(Debug, Clone)]
+pub struct CallSpec<'a> {
+    pub loc: Srcloc,
+    pub name: &'a [u8],
+    pub args: &'a [Rc<BodyForm>],
+    pub tail: Option<Rc<BodyForm>>,
+    pub original: Rc<BodyForm>,
+}
+
+/// Raw callspec for use in codegen.
+#[derive(Debug, Clone)]
+pub struct RawCallSpec<'a> {
+    pub loc: Srcloc,
+    pub args: &'a [Rc<BodyForm>],
+    pub tail: Option<Rc<BodyForm>>,
+    pub original: Rc<BodyForm>,
+}
+
+/// A pair of arguments and an optional tail for function calls.  The tail is
+/// a function tail given by a final &rest argument.
+#[derive(Debug, Default, Clone)]
+pub struct ArgsAndTail {
+    pub args: Vec<Rc<BodyForm>>,
+    pub tail: Option<Rc<BodyForm>>,
 }
 
 impl ModAccum {
@@ -562,15 +675,98 @@ impl HelperForm {
     }
 }
 
+fn compose_lambda_serialized_form(ldata: &LambdaData) -> Rc<SExp> {
+    let lambda_kw = Rc::new(SExp::Atom(ldata.loc.clone(), b"lambda".to_vec()));
+    let amp_kw = Rc::new(SExp::Atom(ldata.loc.clone(), b"&".to_vec()));
+    let arguments = if truthy(ldata.capture_args.clone()) {
+        Rc::new(SExp::Cons(
+            ldata.loc.clone(),
+            Rc::new(SExp::Cons(
+                ldata.loc.clone(),
+                amp_kw,
+                ldata.capture_args.clone(),
+            )),
+            ldata.args.clone(),
+        ))
+    } else {
+        ldata.args.clone()
+    };
+    let rest_of_body = Rc::new(SExp::Cons(
+        ldata.loc.clone(),
+        ldata.body.to_sexp(),
+        Rc::new(SExp::Nil(ldata.loc.clone())),
+    ));
+
+    Rc::new(SExp::Cons(
+        ldata.loc.clone(),
+        lambda_kw,
+        Rc::new(SExp::Cons(ldata.loc.clone(), arguments, rest_of_body)),
+    ))
+}
+
+fn compose_let(marker: &[u8], letdata: &LetData) -> Rc<SExp> {
+    let translated_bindings: Vec<Rc<SExp>> = letdata.bindings.iter().map(|x| x.to_sexp()).collect();
+    let bindings_cons = list_to_cons(letdata.loc.clone(), &translated_bindings);
+    let translated_body = letdata.body.to_sexp();
+    let kw_loc = letdata.kw.clone().unwrap_or_else(|| letdata.loc.clone());
+    Rc::new(SExp::Cons(
+        letdata.loc.clone(),
+        Rc::new(SExp::Atom(kw_loc, marker.to_vec())),
+        Rc::new(SExp::Cons(
+            letdata.loc.clone(),
+            Rc::new(bindings_cons),
+            Rc::new(SExp::Cons(
+                letdata.loc.clone(),
+                translated_body,
+                Rc::new(SExp::Nil(letdata.loc.clone())),
+            )),
+        )),
+    ))
+}
+
+fn compose_assign(letdata: &LetData) -> Rc<SExp> {
+    let mut result = Vec::new();
+    let kw_loc = letdata.kw.clone().unwrap_or_else(|| letdata.loc.clone());
+    result.push(Rc::new(SExp::Atom(kw_loc, b"assign".to_vec())));
+    for b in letdata.bindings.iter() {
+        // Binding pattern
+        match &b.pattern {
+            BindingPattern::Name(v) => {
+                result.push(Rc::new(SExp::Atom(b.nl.clone(), v.to_vec())));
+            }
+            BindingPattern::Complex(c) => {
+                result.push(c.clone());
+            }
+        }
+
+        // Binding body.
+        result.push(b.body.to_sexp());
+    }
+
+    result.push(letdata.body.to_sexp());
+    Rc::new(enlist(letdata.loc.clone(), &result))
+}
+
+fn get_let_marker_text(kind: &LetFormKind, letdata: &LetData) -> Vec<u8> {
+    match (kind, letdata.inline_hint.as_ref()) {
+        (LetFormKind::Sequential, _) => b"let*".to_vec(),
+        (LetFormKind::Parallel, _) => b"let".to_vec(),
+        (LetFormKind::Assign, Some(LetFormInlineHint::Inline(_))) => b"assign-inline".to_vec(),
+        (LetFormKind::Assign, Some(LetFormInlineHint::NonInline(_))) => b"assign-lambda".to_vec(),
+        (LetFormKind::Assign, _) => b"assign".to_vec(),
+    }
+}
+
 impl BodyForm {
     /// Get the general location of the BodyForm.
     pub fn loc(&self) -> Srcloc {
         match self {
             BodyForm::Let(_, letdata) => letdata.loc.clone(),
             BodyForm::Quoted(a) => a.loc(),
-            BodyForm::Call(loc, _) => loc.clone(),
+            BodyForm::Call(loc, _, _) => loc.clone(),
             BodyForm::Value(a) => a.loc(),
             BodyForm::Mod(kl, program) => kl.ext(&program.loc),
+            BodyForm::Lambda(ldata) => ldata.loc.ext(&ldata.body.loc()),
         }
     }
 
@@ -579,29 +775,10 @@ impl BodyForm {
     /// afterward.
     pub fn to_sexp(&self) -> Rc<SExp> {
         match self {
+            BodyForm::Let(LetFormKind::Assign, letdata) => compose_assign(letdata),
             BodyForm::Let(kind, letdata) => {
-                let translated_bindings: Vec<Rc<SExp>> =
-                    letdata.bindings.iter().map(|x| x.to_sexp()).collect();
-                let bindings_cons = list_to_cons(letdata.loc.clone(), &translated_bindings);
-                let translated_body = letdata.body.to_sexp();
-                let marker = match kind {
-                    LetFormKind::Parallel => "let",
-                    LetFormKind::Sequential => "let*",
-                };
-                let kw_loc = letdata.kw.clone().unwrap_or_else(|| letdata.loc.clone());
-                Rc::new(SExp::Cons(
-                    letdata.loc.clone(),
-                    Rc::new(SExp::atom_from_string(kw_loc, marker)),
-                    Rc::new(SExp::Cons(
-                        letdata.loc.clone(),
-                        Rc::new(bindings_cons),
-                        Rc::new(SExp::Cons(
-                            letdata.loc.clone(),
-                            translated_body,
-                            Rc::new(SExp::Nil(letdata.loc.clone())),
-                        )),
-                    )),
-                ))
+                let marker = get_let_marker_text(kind, letdata);
+                compose_let(&marker, letdata)
             }
             BodyForm::Quoted(body) => Rc::new(SExp::Cons(
                 body.loc(),
@@ -609,8 +786,12 @@ impl BodyForm {
                 Rc::new(body.clone()),
             )),
             BodyForm::Value(body) => Rc::new(body.clone()),
-            BodyForm::Call(loc, exprs) => {
-                let converted: Vec<Rc<SExp>> = exprs.iter().map(|x| x.to_sexp()).collect();
+            BodyForm::Call(loc, exprs, tail) => {
+                let mut converted: Vec<Rc<SExp>> = exprs.iter().map(|x| x.to_sexp()).collect();
+                if let Some(t) = tail.as_ref() {
+                    converted.push(Rc::new(SExp::Atom(t.loc(), "&rest".as_bytes().to_vec())));
+                    converted.push(t.to_sexp());
+                }
                 Rc::new(list_to_cons(loc.clone(), &converted))
             }
             BodyForm::Mod(loc, program) => Rc::new(SExp::Cons(
@@ -618,16 +799,45 @@ impl BodyForm {
                 Rc::new(SExp::Atom(loc.clone(), b"mod".to_vec())),
                 program.to_sexp(),
             )),
+            BodyForm::Lambda(ldata) => compose_lambda_serialized_form(ldata),
         }
     }
+}
+
+// Note: in cfg(test), this will not be part of the finished binary.
+// Also: not a test in itself, just named test so for at least some readers,
+// its association with test infrastructure will be apparent.
+#[cfg(test)]
+fn test_parse_bodyform_to_frontend(bf: &str) {
+    let name = "*test*";
+    let loc = Srcloc::start(name);
+    let opts = Rc::new(DefaultCompilerOpts::new(name));
+    let parsed = parse_sexp(loc, bf.bytes()).expect("should parse");
+    let bodyform = compile_bodyform(opts, parsed[0].clone()).expect("should compile");
+    assert_eq!(bodyform.to_sexp(), parsed[0]);
+}
+
+// Inline unit tests for sexp serialization.
+#[test]
+fn test_mod_serialize_regular_mod() {
+    test_parse_bodyform_to_frontend("(mod (X) (+ X 1))");
+}
+
+#[test]
+fn test_mod_serialize_simple_lambda() {
+    test_parse_bodyform_to_frontend("(lambda (X) (+ X 1))");
 }
 
 impl Binding {
     /// Express the binding as it would be used in a let form.
     pub fn to_sexp(&self) -> Rc<SExp> {
+        let pat = match &self.pattern {
+            BindingPattern::Name(name) => Rc::new(SExp::atom_from_vec(self.loc.clone(), name)),
+            BindingPattern::Complex(sexp) => sexp.clone(),
+        };
         Rc::new(SExp::Cons(
             self.loc.clone(),
-            Rc::new(SExp::atom_from_vec(self.loc.clone(), &self.name)),
+            pat,
             Rc::new(SExp::Cons(
                 self.loc.clone(),
                 self.body.to_sexp(),
@@ -724,13 +934,28 @@ pub fn cons_of_string_map<X>(
     list_to_cons(l, &sorted_converted)
 }
 
-pub fn map_m<T, U, E>(f: &dyn Fn(&T) -> Result<U, E>, list: &[T]) -> Result<Vec<U>, E> {
+pub fn map_m<T, U, E, F>(mut f: F, list: &[T]) -> Result<Vec<U>, E>
+where
+    F: FnMut(&T) -> Result<U, E>,
+{
     let mut result = Vec::new();
     for e in list {
         let val = f(e)?;
         result.push(val);
     }
     Ok(result)
+}
+
+pub fn map_m_reverse<T, U, E, F>(mut f: F, list: &[T]) -> Result<Vec<U>, E>
+where
+    F: FnMut(&T) -> Result<U, E>,
+{
+    let mut result = Vec::new();
+    for e in list {
+        let val = f(e)?;
+        result.push(val);
+    }
+    Ok(result.into_iter().rev().collect())
 }
 
 pub fn fold_m<R, T, E>(f: &dyn Fn(&R, &T) -> Result<R, E>, start: R, list: &[T]) -> Result<R, E> {

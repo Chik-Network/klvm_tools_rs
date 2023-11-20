@@ -8,20 +8,20 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use clvm_tools_rs::classic::clvm::__type_compatibility__::{
+use klvm_tools_rs::classic::klvm::__type_compatibility__::{
     bi_one, Bytes, Stream, UnvalidatedBytesFromType,
 };
-use clvm_tools_rs::classic::clvm::serialize::{
-    sexp_from_stream, sexp_to_stream, SimpleCreateCLVMObject,
+use klvm_tools_rs::classic::klvm::serialize::{
+    sexp_from_stream, sexp_to_stream, SimpleCreateKLVMObject,
 };
-use clvm_tools_rs::classic::clvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
-use clvm_tools_rs::compiler::clvm::{convert_from_clvm_rs, convert_to_clvm_rs, sha256tree, truthy};
-use clvm_tools_rs::compiler::prims::{primapply, primcons, primquote};
-use clvm_tools_rs::compiler::sexp::SExp;
-use clvm_tools_rs::compiler::srcloc::Srcloc;
-use clvmr::Allocator;
+use klvm_tools_rs::classic::klvm_tools::stages::stage_0::{DefaultProgramRunner, TRunProgram};
+use klvm_tools_rs::compiler::klvm::{convert_from_klvm_rs, convert_to_klvm_rs, sha256tree, truthy};
+use klvm_tools_rs::compiler::prims::{primapply, primcons, primquote};
+use klvm_tools_rs::compiler::sexp::SExp;
+use klvm_tools_rs::compiler::srcloc::Srcloc;
+use klvmr::Allocator;
 
-use crate::api::{create_clvm_runner_err, get_next_id};
+use crate::api::{create_klvm_runner_err, get_next_id};
 use crate::jsval::{js_object_from_sexp, sexp_from_js_object};
 
 const DEFAULT_CACHE_ENTRIES: usize = 1024;
@@ -90,8 +90,8 @@ impl ObjectCache {
 
     fn create_entry_from_sexp(&mut self, id: i32, sexp: Rc<SExp>) -> Result<String, JsValue> {
         let mut allocator = Allocator::new();
-        let node = convert_to_clvm_rs(&mut allocator, sexp.clone())
-            .map_err(|_| js_sys::JsString::from("could not convert to clvm"))?;
+        let node = convert_to_klvm_rs(&mut allocator, sexp.clone())
+            .map_err(|_| js_sys::JsString::from("could not convert to klvm"))?;
         let mut stream = Stream::new(None);
         sexp_to_stream(&mut allocator, node, &mut stream);
 
@@ -122,12 +122,12 @@ impl ObjectCache {
         let parsed = sexp_from_stream(
             &mut allocator,
             &mut stream,
-            Box::new(SimpleCreateCLVMObject {}),
+            Box::new(SimpleCreateKLVMObject {}),
         )
         .map(|x| x.1)
         .map_err(|_| JsString::from("could not parse sexp from hex"))?;
         let srcloc = Srcloc::start("*var*");
-        let modern = convert_from_clvm_rs(&mut allocator, srcloc, parsed)
+        let modern = convert_from_klvm_rs(&mut allocator, srcloc, parsed)
             .map_err(|_| JsString::from("could not realize parsed sexp"))?;
 
         let cache_entry = ObjectCacheMember { modern };
@@ -474,7 +474,7 @@ impl Program {
     pub fn to_internal(input: &JsValue) -> Result<JsValue, JsValue> {
         let loc = get_srcloc();
         let sexp = sexp_from_js_object(loc, input).map(Ok).unwrap_or_else(|| {
-            Err(create_clvm_runner_err(format!(
+            Err(create_klvm_runner_err(format!(
                 "unable to convert to value"
             )))
         })?;
@@ -536,7 +536,7 @@ impl Program {
             let result_value = Array::new();
             result_value.set(0, object_a);
             result_value.set(1, object_b);
-            // Support reading as a classic clvm input.
+            // Support reading as a classic klvm input.
             Reflect::set(&result_value, &JsString::from("pair"), &result_value)?;
             Reflect::set_prototype_of(&result_value, &prototype)?;
             return Ok(result_value.into());
@@ -636,12 +636,12 @@ impl Program {
 
         let mut allocator = Allocator::new();
         let prog_classic =
-            convert_to_clvm_rs(&mut allocator, prog_cache.modern.clone()).map_err(|_| {
+            convert_to_klvm_rs(&mut allocator, prog_cache.modern.clone()).map_err(|_| {
                 let err: JsValue = JsString::from("error converting program").into();
                 err
             })?;
         let arg_classic =
-            convert_to_clvm_rs(&mut allocator, arg_cache.modern.clone()).map_err(|_| {
+            convert_to_klvm_rs(&mut allocator, arg_cache.modern.clone()).map_err(|_| {
                 let err: JsValue = JsString::from("error converting args").into();
                 err
             })?;
@@ -654,7 +654,7 @@ impl Program {
                 let err: JsValue = JsString::from(err_str).into();
                 err
             })?;
-        let modern_result = convert_from_clvm_rs(&mut allocator, get_srcloc(), run_result.1)
+        let modern_result = convert_from_klvm_rs(&mut allocator, get_srcloc(), run_result.1)
             .map_err(|_| {
                 let err: JsValue = JsString::from("error converting result").into();
                 err
@@ -718,15 +718,15 @@ impl Program {
         js_object_from_sexp(cached.modern.clone())
     }
 
-    // Ported from chia.types.blockchain_format.program in chia-blockchain.
+    // Ported from chik.types.blockchain_format.program in chik-blockchain.
     //
     // original comment:
     //
-    // Replicates the curry function from clvm_tools, taking advantage of *args
+    // Replicates the curry function from klvm_tools, taking advantage of *args
     // being a list.  We iterate through args in reverse building the code to
-    // create a clvm list.
+    // create a klvm list.
     //
-    // Given arguments to a function addressable by the '1' reference in clvm
+    // Given arguments to a function addressable by the '1' reference in klvm
     //
     // fixed_args = 1
     //

@@ -30,7 +30,7 @@ To install a git checkout into your current python environment (must be in some 
 
 Install from PYPI:
 
-    pip install -i https://pypi.chik.net/nightlies/ klvm_tools_rs
+    pip install -i https://pypi.chiknetwork.com/nightlies/ klvm_tools_rs
     
 Most people still compile chiklisp via python.  One way to set up compilation
 in that way is like this:

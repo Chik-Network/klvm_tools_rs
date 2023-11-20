@@ -1,7 +1,7 @@
 {
-  "name": "clvm-tools-interface",
+  "name": "klvm-tools-interface",
   "version": "0.1.35",
-  "description": "Tests and extras for the clvm_tools_rs javascript interface",
+  "description": "Tests and extras for the klvm_tools_rs javascript interface",
   "main": "build/index.js",
   "types": "build/types/index.d.ts",
   "scripts": {

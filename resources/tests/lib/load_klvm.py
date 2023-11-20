@@ -9,17 +9,17 @@ import tempfile
 from typing import List
 
 import pkg_resources
-from clvm_tools_rs import compile_clvm as compile_clvm_rust
+from klvm_tools_rs import compile_klvm as compile_klvm_rust
 
-from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.util.lock import Lockfile
+from chik.types.blockchain_format.program import Program
+from chik.types.blockchain_format.serialized_program import SerializedProgram
+from chik.util.lock import Lockfile
 
-compile_clvm_py = None
+compile_klvm_py = None
 
 recompile_requested = (
-    (os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") != "") or ("pytest" in sys.modules)
-) and os.environ.get("CHIA_DEV_COMPILE_CLVM_DISABLED", None) is None
+    (os.environ.get("CHIK_DEV_COMPILE_KLVM_ON_IMPORT", "") != "") or ("pytest" in sys.modules)
+) and os.environ.get("CHIK_DEV_COMPILE_KLVM_DISABLED", None) is None
 
 
 def translate_path(p_):
@@ -31,26 +31,26 @@ def translate_path(p_):
         return os.path.dirname(inspect.getfile(module_object))
 
 
-# Handle optional use of python clvm_tools if available and requested
-if "CLVM_TOOLS" in os.environ:
+# Handle optional use of python klvm_tools if available and requested
+if "KLVM_TOOLS" in os.environ:
     try:
-        from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
+        from klvm_tools.klvmc import compile_klvm as compile_klvm_py_candidate
 
-        compile_clvm_py = compile_clvm_py_candidate
+        compile_klvm_py = compile_klvm_py_candidate
     finally:
         pass
 
 
-def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path]):
+def compile_klvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path]):
     # Compile using rust (default)
 
     # Ensure path translation is done in the idiomatic way currently
     # expected.  It can use either a filesystem path or name a python
     # module.
     treated_include_paths = list(map(translate_path, search_paths))
-    res = compile_clvm_rust(str(full_path), str(output), treated_include_paths)
+    res = compile_klvm_rust(str(full_path), str(output), treated_include_paths)
 
-    if "CLVM_TOOLS" in os.environ and os.environ["CLVM_TOOLS"] == "check" and compile_clvm_py is not None:
+    if "KLVM_TOOLS" in os.environ and os.environ["KLVM_TOOLS"] == "check" and compile_klvm_py is not None:
         # Simple helper to read the compiled output
         def sha256file(f):
             import hashlib
@@ -61,7 +61,7 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
 
         orig = "%s.orig" % output
 
-        compile_clvm_py(full_path, orig, search_paths=search_paths)
+        compile_klvm_py(full_path, orig, search_paths=search_paths)
         orig256 = sha256file(orig)
         rs256 = sha256file(output)
 
@@ -75,63 +75,63 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
     return res
 
 
-def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path] = []):
-    with Lockfile.create(pathlib.Path(tempfile.gettempdir()) / "clvm_compile" / full_path.name):
-        compile_clvm_in_lock(full_path, output, search_paths)
+def compile_klvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path] = []):
+    with Lockfile.create(pathlib.Path(tempfile.gettempdir()) / "klvm_compile" / full_path.name):
+        compile_klvm_in_lock(full_path, output, search_paths)
 
 
-def load_serialized_clvm(
-    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False, recompile: bool = True
+def load_serialized_klvm(
+    klvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False, recompile: bool = True
 ) -> SerializedProgram:
     """
     This function takes a .clsp file in the given package and compiles it to a
     .clsp.hex file if the .hex file is missing or older than the .clsp file, then
     returns the contents of the .hex file as a `Program`.
 
-    clvm_filename: file name
-    package_or_requirement: usually `__name__` if the clvm file is in the same package
+    klvm_filename: file name
+    package_or_requirement: usually `__name__` if the klvm file is in the same package
     """
-    hex_filename = f"{clvm_filename}.hex"
+    hex_filename = f"{klvm_filename}.hex"
 
-    # Set the CHIA_DEV_COMPILE_CLVM_ON_IMPORT environment variable to anything except
-    # "" or "0" to trigger automatic recompilation of the Chialisp on load.
+    # Set the CHIK_DEV_COMPILE_KLVM_ON_IMPORT environment variable to anything except
+    # "" or "0" to trigger automatic recompilation of the Chiklisp on load.
     if recompile:
         try:
-            if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
+            if pkg_resources.resource_exists(package_or_requirement, klvm_filename):
                 # Establish whether the size is zero on entry
-                full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
+                full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, klvm_filename))
                 output = full_path.parent / hex_filename
                 if not output.exists() or os.stat(full_path).st_mtime > os.stat(output).st_mtime:
                     search_paths = [full_path.parent]
                     if include_standard_libraries:
                         # we can't get the dir, but we can get a file then get its parent.
-                        chia_puzzles_path = pathlib.Path(
+                        chik_puzzles_path = pathlib.Path(
                             pkg_resources.resource_filename(__name__, "__init__.py")
                         ).parent
-                        search_paths.append(chia_puzzles_path)
-                    compile_clvm(full_path, output, search_paths=search_paths)
+                        search_paths.append(chik_puzzles_path)
+                    compile_klvm(full_path, output, search_paths=search_paths)
 
         except NotImplementedError:
             # pyinstaller doesn't support `pkg_resources.resource_exists`
-            # so we just fall through to loading the hex clvm
+            # so we just fall through to loading the hex klvm
             pass
 
-    clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
-    assert len(clvm_hex.strip()) != 0
-    clvm_blob = bytes.fromhex(clvm_hex)
-    return SerializedProgram.from_bytes(clvm_blob)
+    klvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
+    assert len(klvm_hex.strip()) != 0
+    klvm_blob = bytes.fromhex(klvm_hex)
+    return SerializedProgram.from_bytes(klvm_blob)
 
 
-def load_clvm(
-    clvm_filename,
+def load_klvm(
+    klvm_filename,
     package_or_requirement=__name__,
     include_standard_libraries: bool = False,
     recompile: bool = True,
 ) -> Program:
     return Program.from_bytes(
         bytes(
-            load_serialized_clvm(
-                clvm_filename,
+            load_serialized_klvm(
+                klvm_filename,
                 package_or_requirement=package_or_requirement,
                 include_standard_libraries=include_standard_libraries,
                 recompile=recompile,
@@ -140,28 +140,28 @@ def load_clvm(
     )
 
 
-def load_clvm_maybe_recompile(
-    clvm_filename,
+def load_klvm_maybe_recompile(
+    klvm_filename,
     package_or_requirement=__name__,
     include_standard_libraries: bool = False,
     recompile: bool = recompile_requested,
 ) -> Program:
-    return load_clvm(
-        clvm_filename=clvm_filename,
+    return load_klvm(
+        klvm_filename=klvm_filename,
         package_or_requirement=package_or_requirement,
         include_standard_libraries=include_standard_libraries,
         recompile=recompile,
     )
 
 
-def load_serialized_clvm_maybe_recompile(
-    clvm_filename,
+def load_serialized_klvm_maybe_recompile(
+    klvm_filename,
     package_or_requirement=__name__,
     include_standard_libraries: bool = False,
     recompile: bool = recompile_requested,
 ) -> SerializedProgram:
-    return load_serialized_clvm(
-        clvm_filename=clvm_filename,
+    return load_serialized_klvm(
+        klvm_filename=klvm_filename,
         package_or_requirement=package_or_requirement,
         include_standard_libraries=include_standard_libraries,
         recompile=recompile,

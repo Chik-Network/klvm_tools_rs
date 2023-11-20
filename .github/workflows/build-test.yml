@@ -1,16 +1,20 @@
 # Thanks: klvm_rs' github actions.
-name: Build Mac, Linux, and Windows wheels
+name: Build
 
 on:
   push:
     branches:
       #- base
       - dev
-    tags:
-        - '**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build_wheels:
@@ -20,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        python: [3.7, 3.8, 3.9, '3.10']
+        python: [3.8, 3.9, '3.10', 3.11]
 
     steps:
     - uses: actions/checkout@v3
@@ -43,12 +47,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-          python -m pip install maturin==0.12.20
+          python -m pip install maturin==1.1.0
 
     - name: Build MacOs with maturin on Python ${{ matrix.python }}
       if: startsWith(matrix.os, 'macos')
       env:
-        MACOSX_DEPLOYMENT_TARGET: '10.14'
+        MACOSX_DEPLOYMENT_TARGET: '11.0'
       run: |
         python -m venv venv
         ln -s venv/bin/activate
@@ -60,7 +64,7 @@ jobs:
       run: |
         docker run --rm \
           -v ${{ github.workspace }}:/ws --workdir=/ws \
-          ghcr.io/chia-network/build-images/centos-pypa-rust-x86_64 \
+          ghcr.io/chik-network/build-images/centos-pypa-rust-x86_64 \
           bash -exc '\
             yum -y install libc6 openssl-devel && \
             source $HOME/.cargo/env && \
@@ -79,17 +83,11 @@ jobs:
             . ./activate && \
             pip install --upgrade pip
           '
-        docker run --rm -v $(pwd):/io ghcr.io/pyo3/maturin:v0.13.1 build --release --strip --manylinux 2010
+        docker run --rm -v $(pwd):/io ghcr.io/pyo3/maturin:v1.1.0 build --release --strip --manylinux 2014
         # Refresh in case any ownerships changed.
         mv target target.docker && cp -r target.docker target
         # Ensure an empty .cargo-lock file exists.
         touch target/release/.cargo-lock
-
-    - name: Build alpine wheel via docker
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
-      run: |
-        cd resources/alpine && docker build -t klvm-tools-rs-alpine .
-        docker run -v ${GITHUB_WORKSPACE}:/root/klvm_tools_rs -t klvm-tools-rs-alpine sh /root/build-alpine.sh
 
     - name: Build Windows with maturin on Python ${{ matrix.python }}
       if: startsWith(matrix.os, 'windows')
@@ -97,7 +95,7 @@ jobs:
         python -m venv venv
         echo ". .\venv\Scripts\Activate.ps1" > activate.ps1
         . ./activate
-        maturin build --no-sdist -i python --release --strip
+        maturin build -i python --release --strip
         # Find and install the newly built wheel
         python support/wheelname.py
 
@@ -116,7 +114,7 @@ jobs:
       run: |
         . ./activate
         python -m pip install pytest
-        python -m pip install blspy      
+        python -m pip install blspy
 
     - name: install klvm & klvm_tools
       run: |
@@ -140,10 +138,13 @@ jobs:
         python -c 'import klvm; print(klvm.__file__)'
         python -c 'import klvm_rs; print(klvm_rs.__file__)'
         python -c 'import klvm_tools_rs; print(klvm_tools_rs.__file__)'
+        echo "KLVM_TOOLS_RS_VERSION=$(python -c 'import klvm_tools_rs; print(klvm_tools_rs.get_version())')" >> "$GITHUB_ENV"
 
-    - name: Verify recompilation of old sources match
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
+
+    - name: Verify recompilation of old sources match with new compiler
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
       run: |
+        set -x
         . ./activate
         # Build cmd line tools
         PYO3_PYTHON=`which python` cargo build --no-default-features --release
@@ -152,12 +153,19 @@ jobs:
         rm -rf chik-blockchain
         git clone https://github.com/Chik-Network/chik-blockchain
 
-        # Check recompiles
-        cp support/recompile_check.py chik-blockchain
-        (cd chik-blockchain && python recompile_check.py)
+        # Check that recompiling deployed puzzles match with their deployed hashes
+        cp support/install_deps.sh support/verify_compiler_version.sh chik-blockchain
+        (cd chik-blockchain && python -m venv venv && . venv/bin/activate && pip install --upgrade pip && \
+          python -m pip install maturin==1.1.0 && \
+          cd .. && python support/wheelname.py && \
+          cd chik-blockchain && \
+          # deps for manage_klvm.py
+          pip install click typing_extensions chik_rs klvm && \
+          export PYTHONPATH=${PYTHONPATH}:$(pwd) && \
+          ./verify_compiler_version.sh ${KLVM_TOOLS_RS_VERSION} && ./activated.py python tools/manage_klvm.py check)
 
     - name: Test Classic command line tools with pytest
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
       run: |
         python -m pip install pytest
         # This script installs the wheel built during this workflow.
@@ -166,7 +174,7 @@ jobs:
         (cd resources/tests/cmdline/tests && py.test cmds_test.py )
 
     - name: Verify recompilation of cl21 sources
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
       run: |
         . ./activate
         # We need chik-rs for the following.
@@ -178,7 +186,7 @@ jobs:
         (cd resources/tests && python check-recompiles.py)
 
     - name: Verify recompilation follows date and modification rules
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
       run: |
         python support/wheelname.py
         python resources/tests/test-klvm-recompile-behavior.py
@@ -201,15 +209,25 @@ jobs:
         pytest tests
 
     - name: Run tests
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
       run: cargo test --no-default-features
 
+    - name: Exhaustive assign tests
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
+      run: cargo test -- --include-ignored assign
+
     - name: Check coverage
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.7')
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
       run: |
         cargo install grcov
         rustup component add llvm-tools-preview
         python ./resources/coverage/run_coverage.py --require-percent 60
+
+    - name: Build alpine wheel via docker
+      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
+      run: |
+        cd resources/alpine && docker build -t klvm-tools-rs-alpine .
+        docker run -v ${GITHUB_WORKSPACE}:/root/klvm_tools_rs -t klvm-tools-rs-alpine sh /root/build-alpine.sh
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
@@ -217,56 +235,74 @@ jobs:
         name: wheels
         path: ./target/wheels/
 
-    - name: Install Twine
-      run: pip install twine
+  upload:
+    name: Upload to PyPI
+    runs-on: ubuntu-latest
+    needs: build_wheels
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set Env
+      uses: Chik-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install python
+      uses: Chik-Network/actions/setup-python@main
+      with:
+        python-version: "3.10"
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: wheels
+        path: ./target/wheels/
+
+    - name: Publish distribution to PyPI
+      if: env.RELEASE == 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: target/wheels/
+        skip-existing: true
+
+    - name: Publish distribution to Test PyPI
+      if: env.PRE_RELEASE == 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        packages-dir: target/wheels/
+        skip-existing: true
 
     - name: Test for secrets access
       id: check_secrets
       shell: bash
       run: |
-        unset HAS_SECRET
         unset HAS_AWS_SECRET
-
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo "HAS_SECRET=${HAS_SECRET}" >>$GITHUB_OUTPUT
 
         if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
         echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >>$GITHUB_OUTPUT
-
       env:
-        SECRET: "${{ secrets.test_pypi_password }}"
-        AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+        AWS_SECRET: "${{ secrets.CHIK_AWS_ACCOUNT_ID }}"
 
-    - name: publish (PyPi)
-      if: startsWith(github.event.ref, 'refs/tags') && steps.check_secrets.outputs.HAS_SECRET
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_NON_INTERACTIVE: 1
-        TWINE_PASSWORD: ${{ secrets.pypi_password }}
-      run: twine upload --non-interactive --skip-existing --verbose 'target/wheels/*'
-
-    - name: publish (Test PyPi)
-      if: steps.check_secrets.outputs.HAS_SECRET
-      env:
-        TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
-        TWINE_USERNAME: __token__
-        TWINE_NON_INTERACTIVE: 1
-        TWINE_PASSWORD: ${{ secrets.test_pypi_password }}
-      run: twine upload --non-interactive --skip-existing --verbose 'target/wheels/*'
+    - name: Configure AWS credentials
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.CHIK_AWS_ACCOUNT_ID }}:role/installer-upload
+        aws-region: us-west-2
 
     - name: Publish Dev
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/dev'
       shell: bash
       working-directory: ./target/wheels
-      env:
-        AWS_ACCESS_KEY_ID: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
-        AWS_SECRET_ACCESS_KEY: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
-        AWS_REGION: us-west-2
       run: |
         FILES=$(find . -type f -name '*.whl')
         while IFS= read -r file; do
           filename=$(basename $file)
-          aws --no-progress s3 cp "$file" "s3://download.chik.net/simple-dev/klvm-tools-rs/$filename"
+          aws --no-progress s3 cp "$file" "s3://download.chiknetwork.com/simple-dev/klvm-tools-rs/$filename"
         done <<< "$FILES"
 
   fmt:
@@ -296,10 +332,10 @@ jobs:
           override: true
       - name: clippy
         run: cargo clippy --all -- -D warnings
-      - uses: actions-rs/clippy-check@v1
+      - uses: giraffate/clippy-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          reporter: 'github-pr-review'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   unit_tests:
     runs-on: ubuntu-20.04
@@ -322,11 +358,26 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-            toolchain: nightly
-      - name: Install tarpaulin
-        run: cargo +nightly install cargo-tarpaulin
-      - name: Run tarpaulin
-        run: cargo tarpaulin --no-dead-code --engine llvm --workspace --all-features --ignore-panics --out Lcov
+            toolchain: stable
+      - name: Run for coverage
+        run: |
+          sudo apt-get update
+          sudo apt-get install lcov -y
+          rustup component add llvm-tools-preview
+          cargo install grcov
+          export RUSTFLAGS="-Cinstrument-coverage"
+          export LLVM_PROFILE_FILE=$(pwd)/target/klvm_tools_rs-%p-%m.profraw
+          export CARGO_TARGET_DIR=$(pwd)/target
+          cargo test --release --workspace
+          python -m venv venv
+          source venv/bin/activate
+          git clone https://github.com/Chik-Network/klvm_tools.git --branch=main --single-branch
+          pip install ./klvm_tools
+          pip install maturin pytest
+          maturin develop --release
+          (cd resources/tests/cmdline/tests && pytest)
+          grcov . --binary-path target -s . --branch --ignore-not-existing --ignore='*/.cargo/*' --ignore='*/tests/*' -o rust_cov.info
+          python -c 'with open("rust_cov.info") as f: lines = [l for l in f if not (l.startswith("DA:") and int(l.split(",")[1].strip()) >= 2**63)]; open("lcov.info", "w").writelines(lines)'
       - name: Upload to Coveralls
         uses: coverallsapp/github-action@v2
         if: always()

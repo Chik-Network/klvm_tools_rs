@@ -6,12 +6,11 @@ use std::rc::Rc;
 
 use tempfile::NamedTempFile;
 
-use klvm_rs::allocator::{Allocator, NodePtr, SExp};
+use klvm_rs::allocator::{Allocator, NodePtr};
 use klvm_rs::reduction::EvalErr;
 
 use crate::classic::klvm::__type_compatibility__::Stream;
 use crate::classic::klvm::serialize::sexp_to_stream;
-use crate::classic::klvm::sexp::proper_list;
 use crate::classic::klvm_tools::binutils::{assemble_from_ir, disassemble};
 use crate::classic::klvm_tools::ir::reader::read_ir;
 use crate::classic::klvm_tools::stages::run;
@@ -21,28 +20,12 @@ use crate::classic::klvm_tools::stages::stage_2::operators::run_program_for_sear
 use crate::classic::platform::distutils::dep_util::newer;
 
 use crate::compiler::compiler::compile_file;
-use crate::compiler::compiler::run_optimizer;
 use crate::compiler::compiler::DefaultCompilerOpts;
-use crate::compiler::comptypes::CompileErr;
-use crate::compiler::comptypes::CompilerOpts;
+use crate::compiler::comptypes::{CompileErr, CompilerOpts};
+use crate::compiler::dialect::detect_modern;
 use crate::compiler::klvm::convert_to_klvm_rs;
+use crate::compiler::optimize::maybe_finalize_program_via_classic_optimizer;
 use crate::compiler::runtypes::RunFailure;
-
-fn include_dialect(
-    allocator: &mut Allocator,
-    dialects: &HashMap<Vec<u8>, i32>,
-    e: &[NodePtr],
-) -> Option<i32> {
-    if let (SExp::Atom(inc), SExp::Atom(name)) = (allocator.sexp(e[0]), allocator.sexp(e[1])) {
-        if allocator.buf(&inc) == "include".as_bytes().to_vec() {
-            if let Some(dialect) = dialects.get(allocator.buf(&name)) {
-                return Some(*dialect);
-            }
-        }
-    }
-
-    None
-}
 
 pub fn write_sym_output(
     compiled_lookup: &HashMap<String, String>,
@@ -56,40 +39,9 @@ pub fn write_sym_output(
         .map(|_| ())
 }
 
-pub fn detect_modern(allocator: &mut Allocator, sexp: NodePtr) -> Option<i32> {
-    let mut dialects = HashMap::new();
-    dialects.insert("*standard-cl-21*".as_bytes().to_vec(), 21);
-    dialects.insert("*standard-cl-22*".as_bytes().to_vec(), 22);
-
-    proper_list(allocator, sexp, true).and_then(|l| {
-        for elt in l.iter() {
-            if let Some(dialect) = detect_modern(allocator, *elt) {
-                return Some(dialect);
-            }
-
-            match proper_list(allocator, *elt, true) {
-                None => {
-                    continue;
-                }
-
-                Some(e) => {
-                    if e.len() != 2 {
-                        continue;
-                    }
-
-                    if let Some(dialect) = include_dialect(allocator, &dialects, &e) {
-                        return Some(dialect);
-                    }
-                }
-            }
-        }
-
-        None
-    })
-}
-
-pub fn compile_klvm_text(
+pub fn compile_klvm_text_maybe_opt(
     allocator: &mut Allocator,
+    do_optimize: bool,
     opts: Rc<dyn CompilerOpts>,
     symbol_table: &mut HashMap<String, String>,
     text: &str,
@@ -99,12 +51,23 @@ pub fn compile_klvm_text(
     let ir_src = read_ir(text).map_err(|s| EvalErr(allocator.null(), s.to_string()))?;
     let assembled_sexp = assemble_from_ir(allocator, Rc::new(ir_src))?;
 
-    if let Some(dialect) = detect_modern(allocator, assembled_sexp) {
+    let dialect = detect_modern(allocator, assembled_sexp);
+    // Now the stepping is optional (None for classic) but we may communicate
+    // other information in dialect as well.
+    //
+    // I think stepping is a good name for the number below as dialect is going
+    // to get more members that are somewhat independent.
+    if let Some(stepping) = dialect.stepping {
         let runner = Rc::new(DefaultProgramRunner::new());
-        let opts = opts.set_optimize(true).set_frontend_opt(dialect > 21);
+        let opts = opts
+            .set_dialect(dialect)
+            .set_optimize(do_optimize || stepping > 22) // Would apply to cl23
+            .set_frontend_opt(stepping == 22);
 
-        let unopt_res = compile_file(allocator, runner.clone(), opts, text, symbol_table);
-        let res = unopt_res.and_then(|x| run_optimizer(allocator, runner, Rc::new(x)));
+        let unopt_res = compile_file(allocator, runner.clone(), opts.clone(), text, symbol_table);
+        let res = unopt_res.and_then(|x| {
+            maybe_finalize_program_via_classic_optimizer(allocator, runner, opts, do_optimize, &x)
+        });
 
         res.and_then(|x| {
             convert_to_klvm_rs(allocator, x).map_err(|r| match r {
@@ -126,6 +89,25 @@ pub fn compile_klvm_text(
     }
 }
 
+pub fn compile_klvm_text(
+    allocator: &mut Allocator,
+    opts: Rc<dyn CompilerOpts>,
+    symbol_table: &mut HashMap<String, String>,
+    text: &str,
+    input_path: &str,
+    classic_with_opts: bool,
+) -> Result<NodePtr, EvalErr> {
+    compile_klvm_text_maybe_opt(
+        allocator,
+        true,
+        opts,
+        symbol_table,
+        text,
+        input_path,
+        classic_with_opts,
+    )
+}
+
 pub fn compile_klvm_inner(
     allocator: &mut Allocator,
     opts: Rc<dyn CompilerOpts>,
@@ -137,13 +119,19 @@ pub fn compile_klvm_inner(
 ) -> Result<(), String> {
     let result = compile_klvm_text(
         allocator,
-        opts,
+        opts.clone(),
         symbol_table,
         text,
         filename,
         classic_with_opts,
     )
-    .map_err(|x| format!("error {} compiling {}", x.1, disassemble(allocator, x.0)))?;
+    .map_err(|x| {
+        format!(
+            "error {} compiling {}",
+            x.1,
+            disassemble(allocator, x.0, opts.disassembly_ver())
+        )
+    })?;
     sexp_to_stream(allocator, result, result_stream);
     Ok(())
 }

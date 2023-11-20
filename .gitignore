@@ -6,3 +6,8 @@ resources/tests/bridgeref/*.sym
 resources/tests/bridgeref/*.klvm.hex
 resources/tests/gameref21/*.sym
 resources/tests/gameref21/*.klvm.hex
+resources/tests/gameref21/*.klvm.hex
+resources/tests/game-referee/*.sym
+resources/tests/game-referee/*.klvm.hex
+__pycache__
+.pytest_cache

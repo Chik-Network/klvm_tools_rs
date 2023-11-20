@@ -1,10 +1,10 @@
-import type { Program, IProgram, ITuple } from '../../../../../pkg/clvm_tools_wasm.d.ts';
+import type { Program, IProgram, ITuple } from '../../../../../pkg/klvm_tools_wasm.d.ts';
 
 import * as fs from 'fs';
 import { resolve } from 'path';
 import * as assert from 'assert';
 import * as bls_loader from 'bls-signatures';
-const {h, t, Program} = require('../../../../../pkg/clvm_tools_wasm');
+const {h, t, Program} = require('../../../../../pkg/klvm_tools_wasm');
 
 it('Has BLS signatures support', async () => {
     const bls = await bls_loader.default();
@@ -162,7 +162,7 @@ it('Has curry', async () => {
     assert.equal(cost, 2884);
 });
 
-export class ChiaExample {
+export class ChikExample {
     private MOD: IProgram;
 
     constructor(MOD: IProgram) {
@@ -175,9 +175,9 @@ export class ChiaExample {
 
 it('works as expected in context', async () => {
     const bls = await bls_loader.default();
-    const program_text = fs.readFileSync(resolve(__dirname, '../../../content/p2_delegated_puzzle_or_hidden_puzzle.clvm.hex'),'utf-8');
+    const program_text = fs.readFileSync(resolve(__dirname, '../../../content/p2_delegated_puzzle_or_hidden_puzzle.klvm.hex'),'utf-8');
     const MOD: IProgram = Program.from_hex(program_text);
-    const ce = new ChiaExample(MOD);
+    const ce = new ChikExample(MOD);
     const sk = bls.AugSchemeMPL.key_gen([
         0, 50, 6, 244, 24, 199, 1, 25, 52, 88, 192, 19, 18, 12, 89, 6, 220,
         18, 102, 58, 209, 82, 12, 62, 89, 110, 182, 9, 44, 20, 254, 22

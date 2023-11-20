@@ -31,7 +31,7 @@
   ;;
   ;; Calculate the sha256tree of `add2`
   ;;
-  ;; run -i klvm_runtime '(mod (X) (defun add2 (A B) (+ A B)) (include sha256tree.klvm) (sha256tree add2))'
+  ;; run -i klvm_runtime '(mod (X) (defun add2 (A B) (+ A B)) (include sha256tree.klvm) (sha256tree add2))' 
   ;; (q . 0x4212e6549edf9ba3ce6bcd8839ecca37b430ec96ddbbae17e5c669d8e18bd17f)
 
   ;; Now calculate the sha256tree of `add2` when curried with `15`, ie. fixing A to 15

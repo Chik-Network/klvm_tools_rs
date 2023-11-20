@@ -4,21 +4,21 @@ import os
 from pathlib import Path
 from typing import List
 
-# from chia.types.blockchain_format.program import Program
-from clvm_rs import Program
-from clvm_tools.binutils import assemble, disassemble
+# from chik.types.blockchain_format.program import Program
+from klvm_rs import Program
+from klvm_tools.binutils import assemble, disassemble
 
-from clvm_tools_rs import compile_clvm, compose_run_function, start_clvm_program
+from klvm_tools_rs import compile_klvm, compose_run_function, start_klvm_program
 
 
 def compile_module_with_symbols(include_paths: List[Path], source: Path):
     path_obj = Path(source)
     file_path = path_obj.parent
     file_stem = path_obj.stem
-    target_file = file_path / (file_stem + ".clvm.hex")
+    target_file = file_path / (file_stem + ".klvm.hex")
     sym_file = file_path / (file_stem + ".sym")
-    # print(f"compile_clvm({path_obj.absolute()}, {str(target_file.absolute().as_posix())}, {include_paths}, True)")
-    compile_result = compile_clvm(
+    # print(f"compile_klvm({path_obj.absolute()}, {str(target_file.absolute().as_posix())}, {include_paths}, True)")
+    compile_result = compile_klvm(
         str(path_obj.resolve()), str(target_file.absolute()), [str(p) for p in include_paths], True
     )
     print(f"Writing to {target_file} {compile_result}")
@@ -46,11 +46,11 @@ def run_until_end(p):
     return last
 
 
-def diag_run_clvm(program, args, symbols):
+def diag_run_klvm(program, args, symbols):
     hex_form_of_program = binascii.hexlify(bytes(program)).decode("utf8")
     hex_form_of_args = binascii.hexlify(bytes(args)).decode("utf8")
     symbols = json.loads(open(symbols).read())
-    p = start_clvm_program(
+    p = start_klvm_program(
         hex_form_of_program, hex_form_of_args, symbols, None
     )
     report = run_until_end(p)
@@ -66,4 +66,4 @@ if __name__ == "__main__":
 
     program = Program.fromhex(open(sys.argv[1]).read())
     args = Program.fromhex(open(sys.argv[2]).read())
-    diag_run_clvm(program, args)
+    diag_run_klvm(program, args)

@@ -24,3 +24,22 @@ Skipped
 - hierarchikl debug was added.
 - klvm command linetools: supported more command line features in both compiler front-ends.
 
+## 0.1.35 
+
+- embed-file was added.
+- &rest arguments.
+- new bls and sec256 operators.
+
+## 0.1.36
+
+- modern lambda added
+- updated some internal data strucutres and call interfaces to support env variable renaming at during closure generation / lambda capture, or any step during transformation.
+
+## 0.1.37
+
+- First npm publish with a Program-like object reminiscent of
+  chik.types.blockchain_format.program.Program
+
+## 0.1.38
+
+- Uncurry fix, typescript type improvements for npm personality.

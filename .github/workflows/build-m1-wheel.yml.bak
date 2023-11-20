@@ -153,5 +153,5 @@ jobs:
         FILES=$(find ${{ github.workspace }}/target/wheels -type f -name '*.whl')
         while IFS= read -r file; do
           filename=$(basename $file)
-          aws --no-progress s3 cp "$file" "s3://download.chik.net/simple-dev/klvm-tools-rs/$filename"
+          aws --no-progress s3 cp "$file" "s3://download.chiknetwork.com/simple-dev/klvm-tools-rs/$filename"
         done <<< "$FILES"

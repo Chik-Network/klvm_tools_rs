@@ -1,3 +1,5 @@
+mod bls;
+mod embed;
 mod klvmc;
 mod optimize;
 pub mod run;

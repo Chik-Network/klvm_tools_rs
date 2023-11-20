@@ -1,9 +1,9 @@
 use std::borrow::Borrow;
 use std::rc::Rc;
 
-use crate::compiler::clvm::truthy;
 use crate::compiler::comptypes::{BodyForm, CompileErr, CompilerOpts, LambdaData};
 use crate::compiler::frontend::compile_bodyform;
+use crate::compiler::klvm::truthy;
 use crate::compiler::sexp::SExp;
 use crate::compiler::srcloc::Srcloc;
 

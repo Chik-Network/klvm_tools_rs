@@ -7,22 +7,22 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use clvm_rs::allocator::Allocator;
+use klvm_rs::allocator::Allocator;
 
 #[cfg(test)]
-use crate::classic::clvm::__type_compatibility__::bi_one;
-use crate::classic::clvm::__type_compatibility__::bi_zero;
+use crate::classic::klvm::__type_compatibility__::bi_one;
+use crate::classic::klvm::__type_compatibility__::bi_zero;
 
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
-use crate::classic::clvm_tools::stages::stage_2::optimize::optimize_sexp;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_2::optimize::optimize_sexp;
 
-use crate::compiler::clvm::{convert_from_clvm_rs, convert_to_clvm_rs, run};
 use crate::compiler::codegen::{codegen, get_callable};
 use crate::compiler::comptypes::{
     BodyForm, CallSpec, Callable, CompileErr, CompileForm, CompilerOpts, DefunData, HelperForm,
     PrimaryCodegen, SyntheticType,
 };
 use crate::compiler::evaluate::{build_reflex_captures, Evaluator, EVAL_STACK_LIMIT};
+use crate::compiler::klvm::{convert_from_klvm_rs, convert_to_klvm_rs, run};
 use crate::compiler::optimize::strategy::ExistingStrategy;
 use crate::compiler::runtypes::RunFailure;
 use crate::compiler::sexp::SExp;
@@ -215,7 +215,7 @@ fn condition_invert_optimize(
     _forms: &[Rc<BodyForm>],
 ) -> Option<BodyForm> {
     if let Some(res) = opts.dialect().stepping {
-        // Only perform on chialisp above stepping 23.
+        // Only perform on chiklisp above stepping 23.
         if res < 23 {
             return None;
         }
@@ -573,18 +573,18 @@ fn run_optimizer(
     runner: Rc<dyn TRunProgram>,
     r: Rc<SExp>,
 ) -> Result<Rc<SExp>, CompileErr> {
-    let to_clvm_rs = convert_to_clvm_rs(allocator, r.clone())
+    let to_klvm_rs = convert_to_klvm_rs(allocator, r.clone())
         .map(|x| (r.loc(), x))
         .map_err(|e| match e {
             RunFailure::RunErr(l, e) => CompileErr(l, e),
             RunFailure::RunExn(s, e) => CompileErr(s, format!("exception {e}\n")),
         })?;
 
-    let optimized = optimize_sexp(allocator, to_clvm_rs.1, runner)
-        .map_err(|e| CompileErr(to_clvm_rs.0.clone(), e.1))
-        .map(|x| (to_clvm_rs.0, x))?;
+    let optimized = optimize_sexp(allocator, to_klvm_rs.1, runner)
+        .map_err(|e| CompileErr(to_klvm_rs.0.clone(), e.1))
+        .map(|x| (to_klvm_rs.0, x))?;
 
-    convert_from_clvm_rs(allocator, optimized.0, optimized.1).map_err(|e| match e {
+    convert_from_klvm_rs(allocator, optimized.0, optimized.1).map_err(|e| match e {
         RunFailure::RunErr(l, e) => CompileErr(l, e),
         RunFailure::RunExn(s, e) => CompileErr(s, format!("exception {e}\n")),
     })
@@ -613,7 +613,7 @@ pub fn get_optimizer(
 }
 
 /// This small interface takes care of various scenarios that have existed
-/// regarding mixing modern chialisp output with classic's optimizer.
+/// regarding mixing modern chiklisp output with classic's optimizer.
 pub fn maybe_finalize_program_via_classic_optimizer(
     allocator: &mut Allocator,
     runner: Rc<dyn TRunProgram>,

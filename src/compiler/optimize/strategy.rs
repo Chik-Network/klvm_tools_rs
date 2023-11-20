@@ -2,9 +2,9 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use clvmr::allocator::Allocator;
+use klvmr::allocator::Allocator;
 
-use crate::classic::clvm_tools::stages::stage_0::TRunProgram;
+use crate::classic::klvm_tools::stages::stage_0::TRunProgram;
 
 use crate::compiler::comptypes::{
     BodyForm, CompileErr, CompileForm, CompilerOpts, DefunData, HelperForm, PrimaryCodegen,

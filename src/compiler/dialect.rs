@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use clvmr::allocator::{Allocator, NodePtr, SExp};
+use klvmr::allocator::{Allocator, NodePtr, SExp};
 
-use crate::classic::clvm::sexp::proper_list;
+use crate::classic::klvm::sexp::proper_list;
 
 use crate::compiler::sexp::decode_string;
 
@@ -29,7 +29,7 @@ lazy_static! {
                 DialectDescription {
                     accepted: AcceptedDialect { stepping: Some(21) },
                     content: indoc! {"(
-                    (defconstant *chialisp-version* 21)
+                    (defconstant *chiklisp-version* 21)
                 )"}
                     .to_string(),
                 },
@@ -39,7 +39,7 @@ lazy_static! {
                 DialectDescription {
                     accepted: AcceptedDialect { stepping: Some(22) },
                     content: indoc! {"(
-                    (defconstant *chialisp-version* 22)
+                    (defconstant *chiklisp-version* 22)
                 )"}
                     .to_string(),
                 },

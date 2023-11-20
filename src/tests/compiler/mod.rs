@@ -4,11 +4,13 @@ use std::rc::Rc;
 use crate::compiler::sexp::{parse_sexp, SExp};
 use crate::compiler::srcloc::{Srcloc, Until};
 
+mod assign;
 mod cldb;
 mod compiler;
 mod evaluate;
 mod klvm;
 mod repl;
+mod restargs;
 mod runtypes;
 mod srcloc;
 mod usecheck;

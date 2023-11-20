@@ -1,7 +1,7 @@
 use bls12_381::hash_to_curve::{ExpandMsgXmd, HashToCurve};
 use bls12_381::{G1Affine, G1Projective};
 
-use crate::classic::clvm::__type_compatibility__::{Bytes, BytesFromType};
+use crate::classic::klvm::__type_compatibility__::{Bytes, BytesFromType};
 use crate::tests::classic::run::{do_basic_brun, do_basic_run};
 
 const MSG1: &[u8] = &[
