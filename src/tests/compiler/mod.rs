@@ -9,6 +9,7 @@ mod cldb;
 mod compiler;
 mod evaluate;
 mod klvm;
+mod preprocessor;
 mod repl;
 mod restargs;
 mod runtypes;

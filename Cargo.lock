@@ -414,7 +414,7 @@ dependencies = [
 
 [[package]]
 name = "klvm_tools_rs"
-version = "0.1.38"
+version = "0.1.39"
 dependencies = [
  "binascii",
  "bls12_381",
