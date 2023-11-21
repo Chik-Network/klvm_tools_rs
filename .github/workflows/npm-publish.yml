@@ -52,7 +52,7 @@ jobs:
         working-directory: ${{ github.workspace }}/wasm/pkg
         run: |
           cp package.json package.json.orig
-          jq '.name="@chik/chiklisp"' package.json > temp.json && mv temp.json package.json
+          jq '.name="@chik-network/chiklisp"' package.json > temp.json && mv temp.json package.json
 
       - name: Test wasm
         run: node wasm/tests/index.js
