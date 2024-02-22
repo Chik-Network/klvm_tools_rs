@@ -3,7 +3,7 @@ name: Build ARM64 wheels on ubuntu-latest
 on:
   push:
     branches:
-      #- main
+      - main1
       - dev
   release:
     types: [published]

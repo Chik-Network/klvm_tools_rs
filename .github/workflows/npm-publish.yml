@@ -3,7 +3,7 @@ name: npm publish
 on:
   push:
     branches:
-      #- base
+      - base1
   release:
     types: [published]
   pull_request:

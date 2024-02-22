@@ -9,10 +9,12 @@ mod cldb;
 mod compiler;
 mod evaluate;
 mod klvm;
+mod optimizer;
 mod preprocessor;
 mod repl;
 mod restargs;
 mod runtypes;
+mod singleton;
 mod srcloc;
 mod usecheck;
 

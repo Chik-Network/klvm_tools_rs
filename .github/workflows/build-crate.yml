@@ -4,7 +4,7 @@ name: Build crate
 on:
   push:
     branches:
-      #- main
+      - main1
       - dev
     tags:
         - '**'

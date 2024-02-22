@@ -4,7 +4,7 @@ name: Build
 on:
   push:
     branches:
-      #- base
+      - base1
       - dev
   release:
     types: [published]
@@ -140,6 +140,26 @@ jobs:
         python -c 'import klvm_tools_rs; print(klvm_tools_rs.__file__)'
         echo "KLVM_TOOLS_RS_VERSION=$(python -c 'import klvm_tools_rs; print(klvm_tools_rs.get_version())')" >> "$GITHUB_ENV"
 
+    # Test cldb output both run from python and via its command line tool.
+    - name: "Run step run tests"
+      run: |
+        . ./activate
+        cargo build
+        pip install .
+        pip install klvm_rs
+        pip install klvm_tools
+        cd resources/tests && python test_klvm_step.py && python mandelbrot-cldb.py
+
+    - name: "Test step run with mandelbrot, setting print only"
+      run: |
+        . ./activate
+        python ./resources/tests/lib/steprun.py ./resources/tests/mandelbrot/mandelbrot.klvm.hex resources/tests/mandelbrot/mand_args.txt ./resources/tests/mandelbrot/mandelbrot.sym > mand_output.txt
+        # git diff invoked this way returns 0 (as /bin/true) if there is no difference or 1 if there is.
+        git diff --no-index -s --quiet -- mand_output.txt ./resources/tests/mandelbrot/mand_test.txt
+        # Remove file in a compatible way using git as a general tool
+        git add mand_output.txt
+        git rm --force mand_output.txt
+
 
     - name: Verify recompilation of old sources match with new compiler
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
@@ -147,7 +167,7 @@ jobs:
         set -x
         . ./activate
         # Build cmd line tools
-        PYO3_PYTHON=`which python` cargo build --no-default-features --release
+        PYO3_PYTHON=`which python` cargo build --release
 
         # Grab chik-blockchain
         rm -rf chik-blockchain
@@ -210,7 +230,7 @@ jobs:
 
     - name: Run tests
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')
-      run: cargo test --no-default-features
+      run: cargo test
 
     - name: Exhaustive assign tests
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.python, '3.8')

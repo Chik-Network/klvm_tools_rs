@@ -25,7 +25,7 @@ use crate::tests::classic::run::RandomKlvmNumber;
 
 use crate::util::Number;
 
-const TEST_TIMEOUT: usize = 1000000;
+pub const TEST_TIMEOUT: usize = 1000000;
 
 fn test_compiler_klvm(to_run: &String, args: &String) -> Result<Rc<SExp>, RunFailure> {
     let mut allocator = Allocator::new();
