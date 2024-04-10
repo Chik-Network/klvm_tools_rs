@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use klvm_rs::allocator::{Allocator, NodePtr, SExp};
-use klvm_rs::chik_dialect::{ChikDialect, ENABLE_BLS_OPS, ENABLE_SECP_OPS, NO_UNKNOWN_OPS};
+use klvm_rs::chik_dialect::{ChikDialect, NO_UNKNOWN_OPS};
 use klvm_rs::cost::Cost;
 use klvm_rs::dialect::{Dialect, OperatorSet};
 use klvm_rs::reduction::{EvalErr, Reduction, Response};
@@ -122,9 +122,7 @@ impl Drop for CompilerOperators {
 
 impl CompilerOperatorsInternal {
     pub fn new(source_file: &str, search_paths: Vec<String>, symbols_extra_info: bool) -> Self {
-        let base_dialect = Rc::new(ChikDialect::new(
-            NO_UNKNOWN_OPS | ENABLE_BLS_OPS | ENABLE_SECP_OPS,
-        ));
+        let base_dialect = Rc::new(ChikDialect::new(NO_UNKNOWN_OPS));
         let base_runner = Rc::new(DefaultProgramRunner::new());
         CompilerOperatorsInternal {
             base_dialect,

@@ -7,6 +7,8 @@ on:
       - dev
     tags:
         - '**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'
@@ -69,7 +71,7 @@ jobs:
           python -m venv venv && \
           source ./venv/bin/activate && \
           pip install --upgrade pip && \
-          pip install --extra-index-url https://pypi.chia.net/simple/ maturin==1.2.3 && \
+          pip install --extra-index-url https://pypi.chiknetwork.com/simple/ maturin==1.2.3 && \
           maturin build -i python --release --strip \
           '
 

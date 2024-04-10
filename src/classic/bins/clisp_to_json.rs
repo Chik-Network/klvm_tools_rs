@@ -1,6 +1,5 @@
 extern crate klvmr as klvm_rs;
 
-use ::serde_json;
 use std::env;
 use std::rc::Rc;
 

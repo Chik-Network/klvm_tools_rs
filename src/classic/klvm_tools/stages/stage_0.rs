@@ -1,5 +1,5 @@
 use klvm_rs::allocator::{Allocator, NodePtr};
-use klvm_rs::chik_dialect::{ChikDialect, ENABLE_BLS_OPS, ENABLE_SECP_OPS, NO_UNKNOWN_OPS};
+use klvm_rs::chik_dialect::{ChikDialect, NO_UNKNOWN_OPS};
 use klvm_rs::cost::Cost;
 use klvm_rs::reduction::Response;
 
@@ -47,7 +47,7 @@ impl TRunProgram for DefaultProgramRunner {
 
         run_program_with_pre_eval(
             allocator,
-            &ChikDialect::new(NO_UNKNOWN_OPS | ENABLE_BLS_OPS | ENABLE_SECP_OPS),
+            &ChikDialect::new(NO_UNKNOWN_OPS),
             program,
             args,
             max_cost,

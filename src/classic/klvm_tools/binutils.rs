@@ -1,8 +1,6 @@
 use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::rc::Rc;
-
-use encoding8::ascii::is_printable;
-use unicode_segmentation::UnicodeSegmentation;
 
 use klvm_rs::allocator::{Allocator, NodePtr, SExp};
 use klvm_rs::reduction::EvalErr;
@@ -14,15 +12,12 @@ use crate::classic::klvm_tools::ir::r#type::IRRepr;
 use crate::classic::klvm_tools::ir::reader::IRReader;
 use crate::classic::klvm_tools::ir::writer::write_ir;
 
+lazy_static! {
+    pub static ref PRINTABLE_CHARS: HashSet<char> =
+        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ".chars().collect();
+}
 pub fn is_printable_string(s: &str) -> bool {
-    for ch in s.graphemes(true) {
-        if ch.chars().next().unwrap() > 0xff as char
-            || !is_printable(ch.chars().next().unwrap() as u8)
-        {
-            return false;
-        }
-    }
-    true
+    s.chars().all(|s_char| PRINTABLE_CHARS.contains(&s_char))
 }
 
 pub fn assemble_from_ir(
