@@ -248,7 +248,7 @@ dependencies = [
 name = "klvmr"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deabd4e4163efb64486937a7c80996e5bdfb88d21a6baa9c0f802e6b45906109"
+checksum = "38ae5a24dd8def994111ae8751966f1ad7c5f754448921483937a75efa03f1bd"
 dependencies = [
  "chik-bls",
  "klvm-traits",
