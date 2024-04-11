@@ -152,7 +152,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "chik-bls"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba003303bda3019f2fe94e5478555a96addff1d6a1ea84bfe207b3f075cd8420"
+checksum = "d6baaae360f92f96a6def5ac17776de081b62f531c4e02e958435ece0a6ccccb"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -169,7 +169,7 @@ dependencies = [
 name = "chik-traits"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe532ed59df94db00cc1fb85edc3c4dd7287d0590eefb356d960671b93081334"
+checksum = "b9494cd388c3220d6b0eee8c1f902d1390b93d8acda8be0f5ef4c93c824d4df8"
 dependencies = [
  "chik_streamable_macro",
  "hex",
@@ -181,7 +181,7 @@ dependencies = [
 name = "chik_streamable_macro"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "342cdb29dd8c1214d60fac24100ab1567756270710e93336db910a531fe8a264"
+checksum = "4b16474a430c84912f86b6454d6f5fe09ee67d33b3ddf6519ff0cb561f3bd29e"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -193,7 +193,7 @@ dependencies = [
 name = "klvm-traits"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5548b7de9921c68b2ca1101c08dd416bfa9afdf319f5b45183ecb3574ee177a3"
+checksum = "c8284e8595b3a9b131ea0c4178973a824da4f79e3bb00af78df3c8cdaf8747e2"
 dependencies = [
  "num-bigint",
  "thiserror",
