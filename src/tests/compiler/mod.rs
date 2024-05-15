@@ -8,6 +8,8 @@ mod assign;
 mod cldb;
 mod compiler;
 mod evaluate;
+mod fuzz;
+mod fuzz_assign;
 mod klvm;
 mod optimizer;
 mod preprocessor;
